@@ -196,7 +196,7 @@
   }
 
   function kindLabel(kind) {
-    return kind === "tire-juste" ? "Tu as effacé un mot juste" : "Tu as laissé passer la faute";
+    return kind === "tire-juste" ? "Tu as visé une lettre ou un mot juste" : "Tu as laissé passer la faute";
   }
 
   function faultCard(ev) {

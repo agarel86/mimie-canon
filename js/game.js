@@ -738,6 +738,51 @@
       if (live) live.textContent = text;
     }
 
+    function groupCenter(card) {
+      const mates = livingGroup(card);
+      const list = mates.length ? mates : [card];
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      list.forEach((item) => {
+        const x = item.x == null ? item.baseX : item.x;
+        const y = item.y;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x + item.w);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y + item.h);
+      });
+      return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    }
+
+    function bannerWord(card) {
+      if (card.kind === "phrase" && card.group && state.groups[card.group]) {
+        return state.groups[card.group].text;
+      }
+      return card.hint || card.correct;
+    }
+
+    function placeBanner(x, y) {
+      return {
+        x: Math.max(86, Math.min(state.width - 86, x)),
+        y: Math.max(102, Math.min(state.height - state.dockH - 78, y))
+      };
+    }
+
+    function pushBanner(card, happy, extra) {
+      const mid = groupCenter(card);
+      const pos = placeBanner(mid.x, mid.y);
+      state.floaters = state.floaters.filter((f) => f.life < 0.2);
+      state.floaters.push(Object.assign({
+        x: pos.x,
+        y: pos.y,
+        strike: false,
+        color: happy ? "#128a52" : "#c4374a",
+        boom: !!happy
+      }, extra));
+    }
+
     function succeed(card, base) {
       state.good += 1;
       state.combo += 1;
@@ -747,19 +792,15 @@
       state.successes.push({ g: card.chip, correct: card.correct });
       grantPower();
       burst(card, true);
-      state.floaters.push({
-        x: card.baseX + card.w / 2,
-        y: card.y + card.h / 2,
-        life: 0.85,
-        max: 0.85,
+      const word = bannerWord(card);
+      pushBanner(card, true, {
+        life: 1.05,
+        max: 1.05,
         small: card.kind === "letter" ? "BOUM !" : "BIEN !",
-        big: card.hint || card.correct,
-        strike: false,
-        color: "#128a52",
-        points: "+" + gained,
-        boom: true
+        big: word,
+        points: "+" + gained
       });
-      speak("Faute effacée. " + (card.hint || card.correct));
+      speak("Faute effacée. " + word);
       MimieAudio.ok();
       updateHud();
     }
@@ -780,23 +821,20 @@
       burst(card, false);
       const missed = kind === "faute-passee";
       const letter = card.kind === "letter";
-      state.floaters.push({
-        x: card.baseX + card.w / 2,
-        y: Math.min(card.y, state.height - state.dockH - 70),
+      const word = bannerWord(card);
+      pushBanner(card, false, {
         life: 1.45,
         max: 1.45,
         small: missed
           ? (letter ? "Cette lettre était fausse" : "La faute s'écrit")
           : (letter ? "Cette lettre était juste" : "C'était juste"),
-        big: card.hint || card.correct,
-        strike: false,
-        color: "#c4374a",
+        big: word,
         points: ""
       });
       const said = letter
         ? (missed ? "Lettre fausse passée. On écrit " : "Oups, cette lettre était juste. ")
         : (missed ? "Faute passée. On écrit " : "Oups, c'était juste. ");
-      speak(said + (card.hint || card.correct));
+      speak(said + word);
       MimieAudio.bad();
       updateHud();
       if (state.hearts <= 0) end("over");
@@ -963,13 +1001,23 @@
 
     function cardUnderPoint(x, y) {
       if (x == null || y == null) return null;
-      const pad = 14;
-      for (let i = state.cards.length - 1; i >= 0; i--) {
+      const hits = [];
+      for (let i = 0; i < state.cards.length; i++) {
         const card = state.cards[i];
-        if (card.dead) continue;
-        if (x >= card.x - pad && x <= card.x + card.w + pad && y >= card.y - pad && y <= card.y + card.h + pad) return card;
+        if (card.dead || card.x == null) continue;
+        const pad = (card.kind === "letter" || card.kind === "phrase") ? 3 : 10;
+        if (x >= card.x - pad && x <= card.x + card.w + pad && y >= card.y - pad && y <= card.y + card.h + pad) {
+          const cx = card.x + card.w / 2;
+          const cy = card.y + card.h / 2;
+          hits.push({ card: card, d: Math.hypot(cx - x, cy - y) });
+        }
       }
-      return null;
+      if (!hits.length) return null;
+      hits.sort((a, b) => a.d - b.d);
+      const closest = hits[0].d;
+      const near = hits.filter((hit) => hit.d <= closest + 12);
+      const wrong = near.find((hit) => hit.card.isWrong);
+      return (wrong || hits[0]).card;
     }
 
     function rayMeetsCard(ox, oy, dx, dy, card, maxT) {
@@ -1490,45 +1538,37 @@
 
     function drawFloaters() {
       state.floaters.forEach((f) => {
-        const alpha = Math.max(0, Math.min(1, f.life / 0.28));
+        const fade = Math.max(0, Math.min(1, f.life / 0.32));
+        const word = String(f.big || "");
+        const wordSize = word.length > 22 ? 18 : word.length > 14 ? 22 : word.length > 8 ? 28 : 34;
         ctx.save();
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = fade;
+        ctx.font = "800 15px " + CHIP;
+        const labelW = ctx.measureText(f.small).width;
+        ctx.font = "700 " + wordSize + "px " + FONT;
+        const wordW = ctx.measureText(word).width;
+        const w = Math.min(state.width - 20, Math.max(128, Math.max(labelW, wordW) + 40));
+        const h = 86;
+        const x = f.x - w / 2;
+        const y = f.y - h / 2;
+        ctx.fillStyle = f.boom ? "rgba(255, 253, 248, 0.97)" : "rgba(255, 246, 246, 0.97)";
+        ctx.strokeStyle = f.boom ? "#128a52" : "#c4374a";
+        ctx.lineWidth = 3;
+        roundRect(ctx, x, y, w, h, 18);
+        ctx.fill();
+        ctx.stroke();
         ctx.textAlign = "center";
-        if (f.boom) {
-          ctx.font = "700 26px " + FONT;
-          ctx.fillStyle = "#128a52";
-          ctx.fillText(f.small, f.x, f.y - 6);
-          ctx.font = "700 " + (String(f.big).length > 14 ? 22 : 40) + "px " + FONT;
-          ctx.fillStyle = f.color;
-          ctx.fillText(f.big, f.x, f.y + 34);
-          if (f.points) {
-            ctx.font = "700 22px " + FONT;
-            ctx.fillStyle = "#e07a00";
-            ctx.fillText(f.points, f.x, f.y - 36);
-          }
-          ctx.restore();
-          return;
-        }
-        ctx.font = "800 16px " + CHIP;
-        ctx.fillStyle = "#5c6b82";
-        if (f.strike) {
-          const w = ctx.measureText(f.small).width;
-          ctx.fillText(f.small, f.x, f.y);
-          ctx.strokeStyle = "#5c6b82";
-          ctx.beginPath();
-          ctx.moveTo(f.x - w / 2, f.y - 5);
-          ctx.lineTo(f.x + w / 2, f.y - 5);
-          ctx.stroke();
-        } else {
-          ctx.fillText(f.small, f.x, f.y);
-        }
-        ctx.font = "700 " + (String(f.big).length > 16 ? 18 : 28) + "px " + FONT;
+        ctx.textBaseline = "middle";
+        ctx.font = "800 15px " + CHIP;
         ctx.fillStyle = f.color;
-        ctx.fillText(f.big, f.x, f.y + 32);
+        ctx.fillText(f.small, f.x, y + 22);
+        ctx.font = "700 " + wordSize + "px " + FONT;
+        ctx.fillStyle = "#243044";
+        ctx.fillText(word, f.x, y + 54);
         if (f.points) {
-          ctx.font = "700 18px " + FONT;
+          ctx.font = "700 16px " + FONT;
           ctx.fillStyle = "#e07a00";
-          ctx.fillText(f.points, f.x, f.y - 18);
+          ctx.fillText(f.points, f.x, y - 10);
         }
         ctx.restore();
       });

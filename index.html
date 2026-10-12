@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Mimie — Le canon des mots</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🦉%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=23">
+</head>
+<body>
+  <div id="sky" aria-hidden="true"></div>
+  <div id="app">
+    <p id="boot-error" class="boot-error" hidden>Le jeu n’a pas pu préparer les mots. Recharge la page.</p>
+
+    <section id="screen-auth" class="screen">
+      <div class="panel">
+        <div class="owl-wrap" id="owl-auth"></div>
+        <h1>Mimie</h1>
+        <p class="subtitle">Le canon des mots</p>
+
+        <div id="auth-picker">
+          <h2>Qui joue ?</h2>
+          <div id="player-list" class="player-list"></div>
+          <button type="button" class="btn btn-ghost" id="btn-new">Nouveau joueur</button>
+        </div>
+
+        <form id="auth-login" hidden>
+          <h2 id="login-title">Ton code</h2>
+          <label for="login-pin">Code secret</label>
+          <input id="login-pin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off" type="password" pattern="[0-9]*">
+          <div class="row">
+            <button type="button" class="btn btn-ghost" id="btn-show-login">Voir</button>
+            <button type="submit" class="btn">C’est moi</button>
+          </div>
+          <button type="button" class="link" id="btn-forgot">J’ai oublié mon code</button>
+          <button type="button" class="link" id="btn-back-login">Retour</button>
+          <p id="login-msg" class="msg" role="alert"></p>
+        </form>
+
+        <form id="auth-signup" hidden>
+          <h2>Nouveau joueur</h2>
+          <label for="signup-name">Ton prénom</label>
+          <input id="signup-name" maxlength="16" autocomplete="nickname" required>
+          <label for="signup-pin">Choisis un code à 4 chiffres</label>
+          <input id="signup-pin" class="pin" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
+          <label for="signup-pin2">Retape le code</label>
+          <input id="signup-pin2" class="pin" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
+          <div class="row">
+            <button type="button" class="btn btn-ghost" id="btn-show-signup">Voir</button>
+            <button type="submit" class="btn">C’est parti</button>
+          </div>
+          <p class="hint">Ton score reste enregistré sur cet appareil.</p>
+          <button type="button" class="link" id="btn-back-signup">Retour</button>
+          <p id="signup-msg" class="msg" role="alert"></p>
+        </form>
+
+        <form id="auth-forgot" hidden>
+          <h2>Code oublié</h2>
+          <p class="hint">Demande à un adulte.</p>
+          <label for="forgot-name">Prénom</label>
+          <input id="forgot-name" maxlength="16" autocomplete="off">
+          <p id="forgot-math" class="math"></p>
+          <label for="forgot-answer">La réponse</label>
+          <input id="forgot-answer" inputmode="numeric" maxlength="3" autocomplete="off">
+          <label for="forgot-pin">Nouveau code à 4 chiffres</label>
+          <input id="forgot-pin" class="pin" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
+          <button type="submit" class="btn">Enregistrer</button>
+          <button type="button" class="link" id="btn-back-forgot">Retour</button>
+          <p id="forgot-msg" class="msg" role="alert"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="screen-home" class="screen">
+      <div class="panel">
+        <div class="owl-wrap" id="owl-home"></div>
+        <p class="hello" id="home-hello">Salut !</p>
+        <p class="quip" id="home-quip"></p>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Record</span>
+            <strong id="home-best">0</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Série</span>
+            <strong id="home-combo">0</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Mots sûrs</span>
+            <strong id="home-mastery">0</strong>
+          </div>
+        </div>
+        <div class="meter">
+          <div class="meter-top"><span>Aujourd’hui</span><span id="home-daily">0 / 12</span></div>
+          <div class="bar"><span id="home-daily-bar"></span></div>
+        </div>
+        <button type="button" class="btn btn-xl" id="btn-play">Jouer</button>
+        <button type="button" class="btn btn-ghost" id="btn-review">Réviser mes fautes</button>
+        <button type="button" class="btn btn-ghost" id="btn-journal">Mon carnet</button>
+        <button type="button" class="btn btn-ghost" id="btn-help">Comment jouer</button>
+        <button type="button" class="link" id="btn-logout">Changer de joueur</button>
+      </div>
+    </section>
+
+    <section id="screen-help" class="screen">
+      <div class="panel">
+        <div class="owl-wrap" id="owl-help"></div>
+        <div id="help-slide"></div>
+        <div id="help-dots" class="dots"></div>
+        <button type="button" class="btn btn-xl" id="btn-help-next">Suivant</button>
+        <button type="button" class="link" id="btn-help-skip">Passer</button>
+      </div>
+    </section>
+
+    <section id="screen-journal" class="screen">
+      <div class="panel panel-wide">
+        <h2>Mon carnet</h2>
+        <p class="hint">Ce sont les mots à revoir. Quand tu les réussis, ils s’en vont.</p>
+        <div id="journal-list" class="journal"></div>
+        <button type="button" class="btn" id="btn-review-2">Réviser ces fautes</button>
+        <button type="button" class="btn btn-ghost" id="btn-journal-back">Retour</button>
+      </div>
+    </section>
+
+    <section id="screen-game" class="screen screen-game">
+      <canvas id="cv" aria-label="Zone de jeu"></canvas>
+      <header class="hud">
+        <div id="hearts" class="hearts" aria-label="Cœurs"></div>
+        <div class="hud-center">
+          <div id="score" class="score">0</div>
+          <div id="combo" class="combo"></div>
+          <div id="level-name" class="level-name"></div>
+        </div>
+        <div class="hud-actions">
+          <button type="button" id="btn-mute" class="icon-btn" aria-label="Son">Son</button>
+          <button type="button" id="btn-pause" class="icon-btn" aria-label="Pause">Pause</button>
+        </div>
+        <div class="powers">
+          <button type="button" class="power" data-power="loupe" aria-label="Voir les fautes : les mauvaises lettres deviennent rouges" title="Les mauvaises lettres deviennent rouges">
+            <span class="ico" aria-hidden="true">🔍</span>
+            <span class="lbl">Voir<br>fautes</span>
+            <span class="count">0</span>
+          </button>
+          <button type="button" class="power" data-power="slow" aria-label="Moins vite : les mots tombent au ralenti" title="Les mots tombent au ralenti">
+            <span class="ico" aria-hidden="true">🐌</span>
+            <span class="lbl">Moins<br>vite</span>
+            <span class="count">0</span>
+          </button>
+          <button type="button" class="power" data-power="shield" aria-label="Un cœur en plus : tu récupères une vie" title="Tu récupères un cœur">
+            <span class="ico" aria-hidden="true">💛</span>
+            <span class="lbl">+ 1<br>cœur</span>
+            <span class="count">0</span>
+          </button>
+        </div>
+        <p class="rule">Tire sur la faute. Le mot répond tout de suite.</p>
+      </header>
+      <div id="toast" role="status"></div>
+      <div id="level-up" aria-hidden="true">
+        <div class="level-banner">
+          <p id="level-up-kicker" class="lu-kicker">Niveau 2</p>
+          <p id="level-up-title" class="lu-title">Plus vite !</p>
+          <p id="level-up-sub" class="lu-sub">Les mots accélèrent.</p>
+        </div>
+      </div>
+      <div class="dock" id="dock">
+        <button type="button" id="btn-shoot">Tirer</button>
+      </div>
+      <div id="pause-layer" hidden>
+        <div class="panel pause-card">
+          <h2>Pause</h2>
+          <p class="hint">Souris ou doigt : vise, puis un clic ou un tap. Le bouton Tirer fait pareil. Au clavier : flèches et espace.</p>
+          <p class="hint">Voir fautes : lettres en rouge. Moins vite : les mots ralentissent. + 1 cœur : une vie en plus. Une série de 4 t’en donne un.</p>
+          <button type="button" class="btn btn-xl" id="btn-resume">Continuer</button>
+          <button type="button" class="btn btn-ghost" id="btn-quit">Quitter</button>
+        </div>
+      </div>
+      <div id="live" class="sr-only" aria-live="polite"></div>
+    </section>
+
+    <section id="screen-over" class="screen">
+      <div class="panel">
+        <div class="owl-wrap" id="owl-over"></div>
+        <h2 id="over-title">Bien joué !</h2>
+        <div id="over-stars" class="stars" aria-label="Étoiles"></div>
+        <p id="over-score" class="over-score">0</p>
+        <p id="over-detail" class="hint"></p>
+        <div id="over-errors" class="journal"></div>
+        <button type="button" class="btn btn-xl" id="btn-again">Rejouer</button>
+        <button type="button" class="btn btn-ghost" id="btn-over-journal">Voir le carnet</button>
+        <button type="button" class="link" id="btn-over-home">Accueil</button>
+      </div>
+    </section>
+  </div>
+  <div id="confetti" aria-hidden="true"></div>
+  <script src="js/bank.js?v=23"></script>
+  <script src="js/storage.js?v=23"></script>
+  <script src="js/audio.js?v=23"></script>
+  <script src="js/game.js?v=23"></script>
+  <script src="js/ui.js?v=23"></script>
+</body>
+</html>

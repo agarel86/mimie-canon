@@ -32,10 +32,25 @@
     { text: "Une grande maison", parts: [["Une", false], ["grands", true, "grande"], ["grande", false], ["maison", false]] },
     { text: "Je vais au parc", parts: [["Je", false], ["allons", true, "vais"], ["vais", false], ["au", false], ["parc", false]] },
     { text: "Ces fleurs sont belles", parts: [["Ces", false], ["fleurs", false], ["est", true, "sont"], ["sont", false], ["belles", false]] },
-    { text: "Le petit chat", parts: [["Le", false], ["la", true], ["petit", false], ["chat", false]] },
+    { text: "Le petit chat", parts: [["Le", false], ["la", true, "le"], ["petit", false], ["chat", false]] },
     { text: "Les enfants jouent", parts: [["Les", false], ["enfant", true, "enfants"], ["enfants", false], ["jouent", false]] },
-    { text: "Les chats calmes", parts: [["Les", false], ["chat", true, "chats"], ["chats", false], ["calme", true, "calmes"], ["calmes", false]] },
-    { text: "Il est grand", parts: [["Il", false], ["sont", true, "est"], ["est", false], ["grands", true, "grand"], ["grand", false]] }
+    { text: "Tu es grand", parts: [["Tu", false], ["est", true, "es"], ["es", false], ["grand", false]] },
+    { text: "Nous sommes contents", parts: [["Nous", false], ["est", true, "sommes"], ["sommes", false], ["contents", false]] },
+    { text: "Vous avez un chat", parts: [["Vous", false], ["a", true, "avez"], ["avez", false], ["un", false], ["chat", false]] },
+    { text: "Ils prennent le train", parts: [["Ils", false], ["prend", true, "prennent"], ["prennent", false], ["le", false], ["train", false]] },
+    { text: "Elle écrit une lettre", parts: [["Elle", false], ["écris", true, "écrit"], ["écrit", false], ["une", false], ["lettre", false]] },
+    { text: "Les oiseaux volent", parts: [["Les", false], ["oiseaux", false], ["vole", true, "volent"], ["volent", false]] },
+    { text: "Ma sœur chante", parts: [["Ma", false], ["sœur", false], ["chantes", true, "chante"], ["chante", false]] },
+    { text: "Un oiseau bleu", parts: [["Un", false], ["une", true, "un"], ["oiseau", false], ["bleu", false]] },
+    { text: "Les jolies fleurs", parts: [["Les", false], ["joli", true, "jolies"], ["jolies", false], ["fleurs", false]] },
+    { text: "Le maître parle", parts: [["Le", false], ["maître", false], ["parlent", true, "parle"], ["parle", false]] },
+    { text: "Nous finissons le devoir", parts: [["Nous", false], ["finit", true, "finissons"], ["finissons", false], ["le", false], ["devoir", false]] },
+    { text: "Ils vont au marché", parts: [["Ils", false], ["va", true, "vont"], ["vont", false], ["au", false], ["marché", false]] },
+    { text: "Elle est petite", parts: [["Elle", false], ["sont", true, "est"], ["est", false], ["petite", false]] },
+    { text: "Les jours passent", parts: [["Les", false], ["jours", false], ["passe", true, "passent"], ["passent", false]] },
+    { text: "Vous êtes sages", parts: [["Vous", false], ["est", true, "êtes"], ["êtes", false], ["sages", false]] },
+    { text: "Il est allé", parts: [["Il", false], ["est", false], ["aller", true, "allé"], ["allé", false]] },
+    { text: "Elles sont venues", parts: [["Elles", false], ["sont", false], ["venu", true, "venues"], ["venues", false]] }
   ];
 
   function roundRect(ctx, x, y, w, h, r) {

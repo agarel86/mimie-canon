@@ -19,7 +19,7 @@
       ]
     },
     {
-      text: "Vise avec la souris ou le doigt. Un clic ou un tap tire. Le gros bouton Tirer fait la même chose.",
+      text: "Vise avec la souris ou le doigt. Un clic ou un appui tire. Le gros bouton Tirer fait la même chose.",
       cards: [{ chip: "nom", word: "a", cls: "bad" }]
     },
     {
@@ -29,8 +29,8 @@
     {
       text: "Parfois deux ou trois écritures du même mot. Efface la faute, ou les deux fautes. La couleur ne dit pas laquelle.",
       cards: [
-        { chip: "bâtiment", word: "chateau", cls: "bad" },
-        { chip: "bâtiment", word: "château", cls: "good" }
+        { chip: "nom", word: "chateau", cls: "bad" },
+        { chip: "nom", word: "château", cls: "good" }
       ]
     },
     {

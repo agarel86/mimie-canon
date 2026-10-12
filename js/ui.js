@@ -10,7 +10,7 @@
   ];
   const SLIDES = [
     {
-      text: "Un seul mot tombe, découpé en lettres. Tire sur la lettre fausse. Le mot disparaît tout de suite.",
+      text: "Un seul mot tombe, découpé en lettres. Tire sur la lettre en trop. S'il y a pp, comme dans pappa, un des deux p suffit.",
       cards: [
         { chip: "nom", word: "c", cls: "" },
         { chip: "nom", word: "h", cls: "" },
@@ -34,8 +34,8 @@
       ]
     },
     {
-      text: "L'étiquette au-dessus dit ce que c'est : un nom, un adjectif avec son accord, ou un verbe avec le temps et la personne.",
-      cards: [{ chip: "adjectif · pluriel · masculin ou féminin", word: "calmes", cls: "" }]
+      text: "L'étiquette au-dessus dit ce que c'est. Pour un verbe, tu vois le temps et la personne : il faut la bonne terminaison.",
+      cards: [{ chip: "tourner · présent · ils/elles", word: "tournent", cls: "good" }]
     },
     {
       text: "Parfois une phrase tombe en mots. Efface seulement le mot en trop, pour que la phrase soit juste.",

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=23">
+  <link rel="stylesheet" href="css/style.css?v=25">
 </head>
 <body>
   <div id="sky" aria-hidden="true"></div>
@@ -131,16 +131,28 @@
     <section id="screen-game" class="screen screen-game">
       <canvas id="cv" aria-label="Zone de jeu"></canvas>
       <header class="hud">
-        <div id="hearts" class="hearts" aria-label="Cœurs"></div>
-        <div class="hud-center">
-          <div id="score" class="score">0</div>
-          <div id="combo" class="combo"></div>
-          <div id="level-name" class="level-name"></div>
+        <div class="hud-left">
+          <div id="hearts" class="hearts" aria-label="Cœurs"></div>
+          <div class="hud-center">
+            <div id="score" class="score">0</div>
+            <div id="combo" class="combo"></div>
+            <div id="level-name" class="level-name"></div>
+          </div>
         </div>
         <div class="hud-actions">
           <button type="button" id="btn-mute" class="icon-btn" aria-label="Son">Son</button>
           <button type="button" id="btn-pause" class="icon-btn" aria-label="Pause">Pause</button>
         </div>
+      </header>
+      <div id="toast" role="status"></div>
+      <div id="level-up" aria-hidden="true">
+        <div class="level-banner">
+          <p id="level-up-kicker" class="lu-kicker">Niveau 2</p>
+          <p id="level-up-title" class="lu-title">Plus vite !</p>
+          <p id="level-up-sub" class="lu-sub">Les mots accélèrent.</p>
+        </div>
+      </div>
+      <div class="dock" id="dock">
         <div class="powers">
           <button type="button" class="power" data-power="loupe" aria-label="Voir les fautes : les mauvaises lettres deviennent rouges" title="Les mauvaises lettres deviennent rouges">
             <span class="ico" aria-hidden="true">🔍</span>
@@ -158,17 +170,6 @@
             <span class="count">0</span>
           </button>
         </div>
-        <p class="rule">Tire sur la faute. Le mot répond tout de suite.</p>
-      </header>
-      <div id="toast" role="status"></div>
-      <div id="level-up" aria-hidden="true">
-        <div class="level-banner">
-          <p id="level-up-kicker" class="lu-kicker">Niveau 2</p>
-          <p id="level-up-title" class="lu-title">Plus vite !</p>
-          <p id="level-up-sub" class="lu-sub">Les mots accélèrent.</p>
-        </div>
-      </div>
-      <div class="dock" id="dock">
         <button type="button" id="btn-shoot">Tirer</button>
       </div>
       <div id="pause-layer" hidden>
@@ -198,10 +199,10 @@
     </section>
   </div>
   <div id="confetti" aria-hidden="true"></div>
-  <script src="js/bank.js?v=23"></script>
-  <script src="js/storage.js?v=23"></script>
-  <script src="js/audio.js?v=23"></script>
-  <script src="js/game.js?v=23"></script>
-  <script src="js/ui.js?v=23"></script>
+  <script src="js/bank.js?v=25"></script>
+  <script src="js/storage.js?v=25"></script>
+  <script src="js/audio.js?v=25"></script>
+  <script src="js/game.js?v=25"></script>
+  <script src="js/ui.js?v=25"></script>
 </body>
 </html>

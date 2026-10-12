@@ -240,51 +240,46 @@ button { touch-action: manipulation; }
   position: absolute;
   top: 0; left: 0; right: 0;
   z-index: 4;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 6px 10px;
-  align-items: center;
-  padding: calc(8px + env(safe-area-inset-top)) 12px 18px;
-  background: linear-gradient(180deg, rgba(255,253,248,.82), rgba(255,253,248,.45) 62%, rgba(255,253,248,0));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: calc(6px + env(safe-area-inset-top)) 8px 0;
+  background: none;
   pointer-events: none;
 }
 .hud button { pointer-events: auto; }
-.hearts { display: flex; gap: 2px; font-size: 1.45rem; }
+.hud-left { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.hearts { display: flex; gap: 1px; font-size: 1.15rem; line-height: 1; filter: drop-shadow(0 1px 0 #fffdf8); }
 .heart { color: #f0d5dc; }
 .heart.on { color: #ff4d6a; }
-.hud-center { text-align: center; }
-.score { font-family: Fredoka, sans-serif; font-size: 1.8rem; line-height: 1; }
-.combo { font-weight: 800; color: #d35400; min-height: 1.1em; }
-.level-name { font-size: 0.82rem; font-weight: 800; color: #3d5678; }
+.hud-center { text-align: left; }
+.score {
+  font-family: Fredoka, sans-serif;
+  font-size: 1.25rem;
+  line-height: 1;
+  text-shadow: 0 1px 0 #fffdf8;
+}
+.combo { font-weight: 800; color: #d35400; font-size: 0.78rem; min-height: 0; text-shadow: 0 1px 0 #fffdf8; }
+.level-name { font-size: 0.68rem; font-weight: 800; color: #3d5678; text-shadow: 0 1px 0 #fffdf8; }
 .hud-actions { display: flex; gap: 6px; }
 .icon-btn {
   pointer-events: auto;
-  min-width: 58px;
-  min-height: 40px;
-  padding: 6px 10px;
-  background: white;
+  min-width: 52px;
+  min-height: 34px;
+  padding: 4px 8px;
+  background: rgba(255,253,248,.92);
   color: var(--ink);
-  box-shadow: 0 4px 0 #e4d7c4;
-}
-.powers {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 8px;
-  pointer-events: auto;
-}
-.rule {
-  grid-column: 1 / -1;
-  text-align: center;
-  font-weight: 800;
-  color: #3d5678;
-  font-size: 0.92rem;
+  box-shadow: 0 3px 0 #e4d7c4;
+  font-size: 0.82rem;
 }
 
 #toast {
   position: absolute;
   left: 50%;
-  top: 108px;
-  transform: translate(-50%, -8px);
+  top: auto;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 8px);
   z-index: 5;
   max-width: min(440px, 92vw);
   background: white;
@@ -367,19 +362,24 @@ button { touch-action: manipulation; }
   position: absolute;
   left: 0; right: 0; bottom: 0;
   z-index: 3;
-  height: calc(108px + env(safe-area-inset-bottom));
+  height: calc(76px + env(safe-area-inset-bottom));
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: flex-end;
-  padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+  padding: 4px 8px calc(8px + env(safe-area-inset-bottom));
   pointer-events: none;
+}
+.powers {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
 }
 #btn-shoot { pointer-events: auto; }
 .power {
   position: relative;
   width: auto;
-  min-width: 78px;
-  height: 62px;
+  min-width: 64px;
+  height: 52px;
   border-radius: 18px;
   background: white;
   color: var(--ink);
@@ -410,8 +410,8 @@ button { touch-action: manipulation; }
 .power.pop { animation: pop 0.35s ease; }
 @keyframes pop { 50% { transform: scale(1.12); } }
 #btn-shoot {
-  width: 86px;
-  height: 86px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   font-family: Fredoka, sans-serif;
   font-size: 1.2rem;

@@ -3,13 +3,13 @@
   const CHIP = '"Nunito", "Trebuchet MS", Verdana, sans-serif';
   const PALETTE = ["#3d7eff", "#ff7a3c", "#1aaa6b", "#a259e6", "#e3527a"];
   const LEVELS = [
-    [0, "La clairière", "", ""],
-    [22, "La clairière", "Deux écritures !", "Efface la version fausse."],
+    [0, "Le tableau", "", ""],
+    [22, "Le tableau", "Deux écritures !", "Efface la version fausse."],
+    [40, "La tour des verbes", "Les verbes !", "Regarde le temps et la personne."],
     [75, "Le pont des accents", "Plus vite !", "Les mots accélèrent un peu."],
     [130, "La rivière des sons", "Trois écritures !", "Efface les deux fautes."],
     [200, "Le château des homophones", "Encore un peu plus vite !", "Lis bien chaque mot."],
-    [270, "La tour des verbes", "Les verbes !", "Regarde le temps et la personne."],
-    [340, "L'orage des champions", "Champion !", "Tout va un peu plus vite."]
+    [300, "L'orage des champions", "Champion !", "Tout va un peu plus vite."]
   ];
   const POWER_HINT = {
     loupe: "Voir les fautes : les mauvaises lettres deviennent rouges.",
@@ -102,12 +102,12 @@
       combo: 0,
       bestCombo: 0,
       elapsed: 0,
-      warmup: 1.2,
+      warmup: 0,
       groups: {},
       sentenceTold: false,
       letterTold: false,
       versionTold: false,
-      spawnIn: 0.3,
+      spawnIn: 0.04,
       cooldown: 0,
       charges: { loupe: 0, slow: 0, shield: 0 },
       loupeT: 0,
@@ -132,6 +132,8 @@
       width: 300,
       height: 500,
       dockH: 118,
+      topY: 120,
+      beams: [],
       toastQueue: [],
       toastOn: false,
       cloudX: 0,
@@ -187,7 +189,8 @@
       canvas.width = Math.max(1, Math.round(state.width * dpr));
       canvas.height = Math.max(1, Math.round(state.height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      state.dockH = document.getElementById("dock").offsetHeight || 118;
+      state.dockH = document.getElementById("dock").offsetHeight || 76;
+      state.topY = 16;
       state.cards.forEach((card) => {
         card.baseX = Math.max(8, Math.min(state.width - card.w - 8, card.baseX));
       });
@@ -200,42 +203,25 @@
       img.src = "img/" + name + (name === "sky" ? ".jpg" : ".png") + "?v=4";
     });
 
-    function cartSize() {
-      const w = Math.max(170, Math.min(250, state.width * 0.46));
-      return { w: w, h: w * 0.62 };
-    }
-
-    function facingRight() {
-      return state.angle >= -Math.PI / 2;
-    }
-
-    function cartRect() {
-      const cart = cartSize();
-      return {
-        x: state.width / 2 - cart.w / 2,
-        y: state.height - 22 - cart.h,
-        w: cart.w,
-        h: cart.h
-      };
-    }
-
-    function wheelRadius() {
-      return cartSize().w * 0.24;
-    }
-
     function cannonPos() {
-      const cart = cartRect();
-      const r = wheelRadius();
-      return { x: cart.x + cart.w / 2, y: cart.y + cart.h - r - r * 0.3 };
+      return { x: state.width / 2, y: state.height - state.dockH - 6 };
     }
 
     function barrelLength() {
-      return cartSize().w * 0.66;
+      return Math.max(44, Math.min(56, state.width * 0.1));
+    }
+
+    function killLine() {
+      return cannonPos().y - barrelLength() - 8;
+    }
+
+    function spawnTop() {
+      return 18;
     }
 
     function muzzlePoint() {
       const pivot = cannonPos();
-      const reach = barrelLength() * 0.8;
+      const reach = barrelLength() * 0.92;
       return {
         x: pivot.x + Math.cos(state.angle) * reach,
         y: pivot.y + Math.sin(state.angle) * reach
@@ -269,8 +255,8 @@
     }
 
     function fallSeconds() {
-      if (review) return 7.2;
-      return Math.max(5.2, 7.6 - state.elapsed * 0.008);
+      if (review) return 8.8;
+      return Math.max(6.4, 9.8 - state.elapsed * 0.006);
     }
 
     function spawnGap() {
@@ -307,12 +293,32 @@
       state.levelTimer = setTimeout(() => box.classList.remove("on"), reduced ? 900 : 1600);
     }
 
+    function isVerb(entry) {
+      return / · (présent|futur|imparfait|passé composé|impératif) · /.test(entry.g);
+    }
+
+    function verbShare() {
+      if (review) return 0;
+      if (state.elapsed < 14) return 0.42;
+      if (state.elapsed < 90) return 0.5;
+      return 0.62;
+    }
+
+    function seenKey(entry) {
+      return (entry.g || "") + "|" + entry.t;
+    }
+
     function pickEntry() {
+      if (Math.random() < verbShare()) {
+        const most = Math.max(3, tier());
+        const verbs = bank.filter((w) => isVerb(w) && w.d <= most && !state.recent.includes(seenKey(w)));
+        if (verbs.length) return pick(verbs);
+      }
       let pool = bank.filter((w) => review || w.d <= tier());
       if (!pool.length) pool = bank.slice();
       const onScreen = new Set(state.cards.map((c) => c.correct));
       for (let n = 0; n < 12; n++) {
-        const weights = pool.map((w) => (w.d === tier() ? 4 : 1));
+        const weights = pool.map((w) => (w.d === tier() ? 4 : isVerb(w) ? 3 : 1));
         let total = weights.reduce((a, b) => a + b, 0);
         let r = Math.random() * total;
         let entry = pool[0];
@@ -320,7 +326,7 @@
           r -= weights[i];
           if (r <= 0) { entry = pool[i]; break; }
         }
-        if (!onScreen.has(entry.t) && !state.recent.includes(entry.t)) return entry;
+        if (!onScreen.has(entry.t) && !state.recent.includes(seenKey(entry))) return entry;
       }
       return pick(pool);
     }
@@ -418,7 +424,7 @@
         const total = cards.reduce((sum, card) => sum + card.w, 0) + gap * (cards.length - 1);
         if (total + 16 > state.width) continue;
         let x = Math.max(8, (state.width - total) / 2);
-        const y = -Math.max(...cards.map((card) => card.h)) - 12;
+        const y = spawnTop();
         cards.forEach((card) => {
           card.baseX = x;
           card.y = y;
@@ -463,9 +469,34 @@
       return options.length ? pick(options) : null;
     }
 
-    function spawnLetters() {
+    function isSubsequence(small, big) {
+      let i = 0;
+      for (const ch of big) if (i < small.length && ch === small[i]) i++;
+      return i === small.length;
+    }
+
+    // Dans « pappa », les deux p de « pp » sont de bonnes cibles : on regarde si
+    // le mot juste reste écrivable une fois la lettre enlevée.
+    function refreshLetters(groupKey) {
+      const tiles = state.cards
+        .filter((card) => card.group === groupKey && !card.dead && card.kind === "letter")
+        .sort((a, b) => a.baseX - b.baseX);
+      if (!tiles.length) return "";
+      const rest = tiles.map((tile) => tile.shown).join("");
+      const correct = tiles[0].correct;
+      if (rest.length > correct.length && isSubsequence(correct, rest)) {
+        tiles.forEach((tile, index) => {
+          const without = rest.slice(0, index) + rest.slice(index + 1);
+          tile.isWrong = isSubsequence(correct, without);
+          tile.mask = tile.isWrong ? [true] : null;
+        });
+      }
+      return rest;
+    }
+
+    function spawnLetters(given) {
       for (let n = 0; n < 12; n++) {
-        const entry = pickEntry();
+        const entry = given && n === 0 ? given : pickEntry();
         const fault = visibleFault(entry);
         if (!fault) continue;
         const letters = Array.from(fault.shown);
@@ -499,25 +530,26 @@
           pair: 1,
           group: group
         }));
-        if (!placeRow(cards, -size - 24, gap)) continue;
+        if (!placeRow(cards, spawnTop(), gap)) continue;
         state.sentenceSeq = (state.sentenceSeq || 0) + 1;
         state.groups[group] = { text: entry.t, label: entry.g, left: cards.length, failed: false, kind: "lettres" };
         state.cards.push(...cards);
-        state.recent.push(entry.t);
+        refreshLetters(group);
+        state.recent.push(seenKey(entry));
         if (state.recent.length > 8) state.recent.shift();
         if (!state.letterTold) {
           state.letterTold = true;
-          toast("Tire sur la lettre fausse. Le mot répond tout de suite.");
+          toast("Tire sur la lettre en trop. S'il y a pp, un des deux p suffit.");
         }
         return true;
       }
       return false;
     }
 
-    function spawnVersions() {
+    function spawnVersions(given) {
       const wantThree = maxCards() >= 3 && Math.random() < 0.5;
       for (let n = 0; n < 10; n++) {
-        const entry = pickEntry();
+        const entry = given && n === 0 ? given : pickEntry();
         const wrongs = (entry.b || []).filter((word) => word && word !== entry.t);
         if (!wrongs.length) continue;
         const take = wantThree && wrongs.length >= 2 ? 2 : 1;
@@ -548,12 +580,11 @@
           card.kind = "version";
           return card;
         });
-        const y = -Math.max.apply(null, cards.map((card) => card.h)) - 16;
-        if (!placeRow(cards, y, 10)) continue;
+        if (!placeRow(cards, spawnTop(), 10)) continue;
         state.sentenceSeq = (state.sentenceSeq || 0) + 1;
         state.groups[group] = { text: entry.t, label: entry.g, left: cards.length, failed: false, kind: "versions" };
         state.cards.push(...cards);
-        state.recent.push(entry.t);
+        state.recent.push(seenKey(entry));
         if (state.recent.length > 8) state.recent.shift();
         if (!state.versionTold) {
           state.versionTold = true;
@@ -566,12 +597,16 @@
 
     function spawn() {
       if (state.cards.length || !bank.length) return;
+      const entry = pickEntry();
+      if (isVerb(entry)) {
+        if (spawnVersions(entry) || spawnLetters(entry)) return;
+      }
       const roll = Math.random();
-      const phraseAt = state.elapsed < 16 ? 0 : Math.min(0.2, 0.08 + state.elapsed * 0.0004);
-      const versionAt = state.elapsed < 12 ? 0.08 : Math.min(0.38, 0.14 + state.elapsed * 0.0007);
+      const phraseAt = state.elapsed < 16 ? 0 : Math.min(0.18, 0.07 + state.elapsed * 0.0004);
+      const versionAt = state.elapsed < 12 ? 0.1 : Math.min(0.38, 0.14 + state.elapsed * 0.0007);
       if (roll < phraseAt && spawnSentence()) return;
-      if (roll < phraseAt + versionAt && spawnVersions()) return;
-      if (!spawnLetters()) spawnVersions();
+      if (roll < phraseAt + versionAt && spawnVersions(entry)) return;
+      if (!spawnLetters(entry)) spawnVersions(entry);
     }
 
     function pointsFor(base, bonus) {
@@ -703,8 +738,24 @@
 
     function resolveShot(card) {
       if (card.dead || state.ended) return;
+      const wasWrong = card.isWrong;
       card.dead = true;
-      if (card.isWrong) {
+      if (card.kind === "letter") {
+        if (!wasWrong) {
+          fail(card, "tire-juste");
+          wipeGroup(card);
+          finishGroup(card, true);
+          return;
+        }
+        succeed(card, 100);
+        const rest = refreshLetters(card.group);
+        if (!rest || rest === card.correct || !livingGroup(card).some((other) => other.isWrong)) {
+          wipeGroup(card);
+          finishGroup(card, false);
+        }
+        return;
+      }
+      if (wasWrong) {
         const moreFaults = livingGroup(card).some((other) => other.isWrong);
         succeed(card, 100);
         if (!moreFaults) {
@@ -848,12 +899,23 @@
         state.angle = angle;
       }
       const muzzle = muzzlePoint();
+      const reach = target && target.x != null
+        ? { x: target.x + target.w / 2, y: target.y + target.h / 2 }
+        : { x: muzzle.x + Math.cos(angle) * 420, y: muzzle.y + Math.sin(angle) * 420 };
+      state.beams.push({
+        x0: muzzle.x,
+        y0: muzzle.y,
+        x1: reach.x,
+        y1: reach.y,
+        life: 0.18,
+        max: 0.18
+      });
       state.bullets.push({
         x: muzzle.x,
         y: muzzle.y,
-        vx: Math.cos(angle) * 980,
-        vy: Math.sin(angle) * 980,
-        life: 1.4,
+        vx: Math.cos(angle) * 1400,
+        vy: Math.sin(angle) * 1400,
+        life: 1.1,
         target: target
       });
       MimieAudio.shoot();
@@ -986,8 +1048,8 @@
           state.spawnIn = 0.6;
         }
       }
-      const speed = (state.height - state.dockH) / fallSeconds();
-      const killY = state.height - state.dockH;
+      const killY = killLine();
+      const speed = Math.max(40, (killY - spawnTop()) / fallSeconds());
       state.cards.forEach((card) => {
         const wobble = card.pair || reduced ? 0 : Math.sin(state.elapsed * 1.5 + card.phase) * 6;
         card.x = card.baseX + wobble;
@@ -1010,7 +1072,7 @@
             resolveShot(aimed);
             return;
           }
-          const step = Math.min(dist, 980 * dt);
+          const step = Math.min(dist, 1400 * dt);
           bullet.x += dx / dist * step;
           bullet.y += dy / dist * step;
           return;
@@ -1050,6 +1112,8 @@
       state.particles = state.particles.filter((p) => p.life > 0).slice(-120);
       state.waves.forEach((wave) => { wave.life -= dt; });
       state.waves = state.waves.filter((wave) => wave.life > 0);
+      state.beams.forEach((beam) => { beam.life -= dt; });
+      state.beams = state.beams.filter((beam) => beam.life > 0);
       state.floaters.forEach((f) => { f.y -= 36 * dt; f.life -= dt; });
       state.floaters = state.floaters.filter((f) => f.life > 0).slice(-4);
     }
@@ -1182,168 +1246,80 @@
     }
 
     function drawCannon() {
-      const cart = cartRect();
       const pivot = cannonPos();
       const L = barrelLength();
-      const R = wheelRadius();
-      const groundY = cart.y + cart.h;
-      const wheelY = groundY - R;
-      const back = facingRight() ? -1 : 1;
-      const outline = "#3b2414";
+      const thick = Math.max(13, L * 0.34);
+      const ledgeW = Math.min(132, state.width * 0.34);
+      const ledgeY = state.height - state.dockH + 4;
 
       ctx.save();
-      ctx.fillStyle = "rgba(36, 48, 68, 0.22)";
+      ctx.fillStyle = "rgba(36, 48, 68, 0.16)";
       ctx.beginPath();
-      ctx.ellipse(pivot.x + back * cart.w * 0.18, groundY - 2, cart.w * 0.48, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(pivot.x, ledgeY + 4, ledgeW * 0.42, 6, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Affût : une poutre en bois qui part de l'axe vers l'arrière et touche le sol.
-      const tailX = pivot.x + back * cart.w * 0.5;
-      const tailY = groundY - R * 0.16;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = R * 0.62 + 6;
-      ctx.beginPath();
-      ctx.moveTo(pivot.x, pivot.y + R * 0.15);
-      ctx.lineTo(tailX, tailY);
-      ctx.stroke();
-      ctx.strokeStyle = "#c97a3a";
-      ctx.lineWidth = R * 0.62;
-      ctx.stroke();
-      ctx.strokeStyle = "#e39a55";
-      ctx.lineWidth = R * 0.16;
-      ctx.beginPath();
-      ctx.moveTo(pivot.x, pivot.y + R * 0.02);
-      ctx.lineTo(tailX, tailY - R * 0.14);
-      ctx.stroke();
-      ctx.fillStyle = "#5d6a80";
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(tailX, tailY, R * 0.2, 0, Math.PI * 2);
+      const frame = ctx.createLinearGradient(pivot.x, ledgeY - 20, pivot.x, ledgeY + 10);
+      frame.addColorStop(0, "#e4b57d");
+      frame.addColorStop(1, "#8a5428");
+      ctx.fillStyle = frame;
+      ctx.strokeStyle = "#5c3516";
+      ctx.lineWidth = 2;
+      roundRect(ctx, pivot.x - ledgeW / 2, ledgeY - 18, ledgeW, 26, 7);
       ctx.fill();
       ctx.stroke();
+      ctx.fillStyle = "#2a4638";
+      roundRect(ctx, pivot.x - ledgeW / 2 + 6, ledgeY - 13, ledgeW - 12, 16, 4);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(180, 220, 190, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
 
-      // Fût : bronze-bleu, cerclé d'or, il tourne autour de l'axe.
       ctx.save();
       ctx.translate(pivot.x, pivot.y);
       ctx.rotate(state.angle);
-      const x0 = -L * 0.2;
-      const x1 = L * 0.8;
-      const rb = R * 0.6;
-      const rm = R * 0.44;
-      const body = ctx.createLinearGradient(0, -rb, 0, rb);
-      body.addColorStop(0, "#8ea6d6");
-      body.addColorStop(0.3, "#4a5f94");
-      body.addColorStop(0.75, "#2a3762");
-      body.addColorStop(1, "#1b2443");
+      const x0 = -L * 0.28;
+      const x1 = L * 0.72;
+      const r = Math.max(6, thick * 0.72);
+      const body = ctx.createLinearGradient(0, -r, 0, r);
+      body.addColorStop(0, "#fffef6");
+      body.addColorStop(0.4, "#f4e7c2");
+      body.addColorStop(1, "#d7c08a");
       ctx.fillStyle = body;
-      ctx.strokeStyle = "#141a33";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#9a8158";
+      ctx.lineWidth = 2;
+      roundRect(ctx, x0, -r, x1 - x0, r * 2, r * 0.9);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      roundRect(ctx, x0 + 3, -r + 2, x1 - x0 - 10, r * 0.55, 4);
+      ctx.fill();
+      ctx.fillStyle = "#fffdf4";
       ctx.beginPath();
-      ctx.moveTo(x0, -rb);
-      ctx.lineTo(x1, -rm);
-      ctx.lineTo(x1, rm);
-      ctx.lineTo(x0, rb);
+      ctx.moveTo(x1 - 1, -r * 0.7);
+      ctx.lineTo(x1 + r * 1.05, 0);
+      ctx.lineTo(x1 - 1, r * 0.7);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = "#c4ad7a";
       ctx.stroke();
+      ctx.fillStyle = "rgba(255, 252, 240, 0.7)";
       ctx.beginPath();
-      ctx.arc(x0, 0, rb, Math.PI / 2, Math.PI * 1.5);
+      ctx.arc(x1 + r * 0.25, 0, r * 0.55, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#f2b632";
-      ctx.beginPath();
-      ctx.arc(x0 - rb * 0.95, 0, rb * 0.32, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      const band = (at, r, w) => {
-        ctx.fillStyle = "#f2b632";
-        ctx.strokeStyle = "#8a5a00";
-        ctx.lineWidth = 2;
-        roundRect(ctx, at - w / 2, -r, w, r * 2, Math.min(5, w / 2));
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = "rgba(255, 244, 200, 0.75)";
-        ctx.fillRect(at - w / 2 + 2, -r + 2, w - 4, r * 0.35);
-      };
-      band(L * 0.08, rb * 1.06, L * 0.07);
-      band(L * 0.45, (rb + rm) / 2 * 1.06, L * 0.06);
-      band(x1 - L * 0.04, rm * 1.28, L * 0.09);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
-      ctx.beginPath();
-      ctx.moveTo(x0 + L * 0.05, -rb * 0.62);
-      ctx.lineTo(x1 - L * 0.12, -rm * 0.6);
-      ctx.lineTo(x1 - L * 0.12, -rm * 0.36);
-      ctx.lineTo(x0 + L * 0.05, -rb * 0.36);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#0d1124";
-      ctx.beginPath();
-      ctx.ellipse(x1 + 1, 0, rm * 0.28, rm * 0.86, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Roue en bois devant le fût.
-      ctx.save();
-      ctx.translate(pivot.x, wheelY);
-      ctx.lineWidth = R * 0.2 + 6;
-      ctx.strokeStyle = outline;
-      ctx.beginPath();
-      ctx.arc(0, 0, R * 0.9, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = R * 0.2;
-      ctx.strokeStyle = "#b36a2e";
-      ctx.stroke();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "#5d6a80";
-      ctx.beginPath();
-      ctx.arc(0, 0, R, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineCap = "round";
-      for (let i = 0; i < 8; i++) {
-        const a = i * Math.PI / 4;
-        ctx.strokeStyle = outline;
-        ctx.lineWidth = R * 0.13 + 3;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a) * R * 0.2, Math.sin(a) * R * 0.2);
-        ctx.lineTo(Math.cos(a) * R * 0.8, Math.sin(a) * R * 0.8);
-        ctx.stroke();
-        ctx.strokeStyle = "#d58b45";
-        ctx.lineWidth = R * 0.13;
-        ctx.stroke();
-      }
-      ctx.fillStyle = "#f2b632";
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, R * 0.24, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#8a5a00";
-      ctx.beginPath();
-      ctx.arc(0, 0, R * 0.09, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.fillStyle = "#f2b632";
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(pivot.x, pivot.y, R * 0.17, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
       ctx.restore();
 
       const muzzle = muzzlePoint();
       ctx.save();
-      ctx.strokeStyle = "#ff6b4a";
-      ctx.lineWidth = 4;
-      ctx.setLineDash([4, 12]);
+      ctx.strokeStyle = "rgba(255, 252, 240, 0.9)";
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([5, 9]);
       ctx.lineCap = "round";
+      ctx.shadowColor = "rgba(255, 255, 255, 0.65)";
+      ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.moveTo(muzzle.x, muzzle.y);
-      ctx.lineTo(muzzle.x + Math.cos(state.angle) * 48, muzzle.y + Math.sin(state.angle) * 48);
+      ctx.lineTo(muzzle.x + Math.cos(state.angle) * 42, muzzle.y + Math.sin(state.angle) * 42);
       ctx.stroke();
       ctx.restore();
       if (state.aim) {
@@ -1479,20 +1455,32 @@
         ctx.fill();
         ctx.globalAlpha = 1;
       });
+      state.beams.forEach((beam) => {
+        const t = Math.max(0, beam.life / beam.max);
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 252, 240, " + (0.85 * t) + ")";
+        ctx.lineWidth = 2 + 6 * t;
+        ctx.lineCap = "round";
+        ctx.setLineDash([5, 8]);
+        ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(beam.x0, beam.y0);
+        ctx.lineTo(beam.x1, beam.y1);
+        ctx.stroke();
+        ctx.restore();
+      });
       state.bullets.forEach((b) => {
-        if (ART.star) {
-          const s = 34;
-          ctx.save();
-          ctx.translate(b.x, b.y);
-          ctx.rotate(Math.atan2(b.vy, b.vx) + Math.PI / 2);
-          ctx.drawImage(ART.star, -s / 2, -s / 2, s, s);
-          ctx.restore();
-        } else {
-          ctx.fillStyle = "#ffc14d";
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, 9, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(Math.atan2(b.vy, b.vx));
+        ctx.fillStyle = "#fffdf6";
+        ctx.strokeStyle = "rgba(138, 115, 80, 0.4)";
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, -11, -3.5, 20, 7, 3);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
       });
       drawCannon();
       state.waves.forEach((wave) => {

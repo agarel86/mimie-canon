@@ -1963,24 +1963,45 @@ if (!words.some((w) => w.t === "chat" && w.g.startsWith("nom"))) errors.push("ch
 if (words.some((w) => w.g === "adjectif" || w.g === "pour un garçon" || w.g === "mot")) errors.push("étiquette trop vague");
 
 const ILS_ER_SPECIAL = { aller: "vont" };
+function lastWord(s) {
+  const bits = String(s).trim().split(/\s+/);
+  return bits[bits.length - 1] || "";
+}
 for (const w of words) {
   const parts = w.g.split(" · ");
-  if (parts.length < 3 || parts[1] !== "présent") continue;
-  const person = parts.slice(2).join(" · ");
-  if (person !== "ils/elles" && person !== "ils" && person !== "elles") continue;
+  if (parts.length < 3) continue;
   const inf = parts[0];
-  if (!inf.endsWith("er")) continue;
-  const special = ILS_ER_SPECIAL[inf];
-  if (special) {
-    if (w.t !== special) errors.push(inf + " · " + person + " : « " + w.t + " » au lieu de « " + special + " »");
-    continue;
+  const tense = parts[1];
+  const person = parts.slice(2).join(" · ");
+  const last = lastWord(w.t);
+  if (tense === "présent") {
+    if (/nous/.test(person)) {
+      if (last !== "sommes" && last.endsWith("ent")) {
+        errors.push(inf + " · présent · " + person + " affiche « " + w.t + " » : nous, c'est -ons, pas -ent");
+      }
+      if (last !== "sommes" && !/(ons|çons)$/.test(last)) {
+        errors.push(inf + " · présent · " + person + " affiche « " + w.t + " » : attendu une forme en -ons");
+      }
+    }
+    if (person === "ils/elles" || person === "ils" || person === "elles") {
+      if (inf.endsWith("er")) {
+        const special = ILS_ER_SPECIAL[inf];
+        if (special) {
+          if (w.t !== special) errors.push(inf + " · " + person + " : « " + w.t + " » au lieu de « " + special + " »");
+        } else if (!last.endsWith("ent")) {
+          errors.push(inf + " · " + person + " affiche « " + w.t + " » : la terminaison doit être -ent");
+        }
+        const singular = words.find((other) => {
+          const p = other.g.split(" · ");
+          return p[0] === inf && p[1] === "présent" && (p[2] === "il/elle" || p[2] === "il" || p[2] === "elle");
+        });
+        if (singular && w.t === singular.t) errors.push(inf + " : ils/elles reprend la forme du singulier « " + w.t + " »");
+      }
+      if (/(ons|çons)$/.test(last) && !/^(vont|font|ont|sont)$/.test(last)) {
+        errors.push(inf + " · présent · " + person + " affiche « " + w.t + " » : ils/elles, ce n'est pas -ons");
+      }
+    }
   }
-  if (!w.t.endsWith("ent")) errors.push(inf + " · " + person + " affiche « " + w.t + " » : la terminaison doit être -ent");
-  const singular = words.find((other) => {
-    const p = other.g.split(" · ");
-    return p[0] === inf && p[1] === "présent" && (p[2] === "il/elle" || p[2] === "il" || p[2] === "elle");
-  });
-  if (singular && w.t === singular.t) errors.push(inf + " : ils/elles reprend la forme du singulier « " + w.t + " »");
 }
 
 if (errors.length) {

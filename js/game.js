@@ -460,11 +460,46 @@
       return i === small.length;
     }
 
+    function personOf(entry) {
+      const parts = (entry.g || "").split(" · ");
+      return parts.length >= 3 ? parts.slice(2).join(" · ") : "";
+    }
+
+    function lastWord(s) {
+      const bits = String(s).trim().split(/\s+/);
+      return bits[bits.length - 1] || "";
+    }
+
+    function otherPersons(entry) {
+      const parts = (entry.g || "").split(" · ");
+      if (parts.length < 3) return new Set();
+      return new Set(
+        bank
+          .filter((w) => {
+            const p = (w.g || "").split(" · ");
+            return p[0] === parts[0] && p[1] === parts[1] && w.t !== entry.t;
+          })
+          .map((w) => w.t)
+      );
+    }
+
+    // Ne jamais afficher « aiment » tout seul avec l'étiquette nous :
+    // l'enfant croirait que nous prend -ent.
+    function confusesPerson(entry, shown) {
+      const person = personOf(entry);
+      const last = lastWord(shown);
+      if (/nous/.test(person) && /ent$/.test(last)) return true;
+      if (/(ils|elles)/.test(person) && /(ons|çons)$/.test(last) && !/^(vont|font|ont|sont)$/.test(last)) return true;
+      if (/vous/.test(person) && /ent$/.test(last)) return true;
+      return otherPersons(entry).has(shown);
+    }
+
     function visibleFault(entry) {
       if (!entry || !entry.t || entry.t.includes(" ")) return null;
       const options = [];
       (entry.b || []).forEach((shown) => {
         if (!shown || shown === entry.t || shown.includes(" ")) return;
+        if (confusesPerson(entry, shown)) return;
         const mask = diffMask(shown, entry.t);
         if (!mask.some(Boolean)) return;
         const extra = shown.length > entry.t.length && isSubsequence(entry.t, shown);

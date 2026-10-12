@@ -323,27 +323,52 @@
       return (entry.g || "") + "|" + entry.t;
     }
 
-    function pickEntry() {
-      if (Math.random() < verbShare()) {
-        const most = Math.max(3, tier());
-        const verbs = bank.filter((w) => isVerb(w) && w.d <= most && !state.recent.includes(seenKey(w)));
-        if (verbs.length) return pick(verbs);
+    const wordsByMax = [[], [], [], [], []];
+    const verbsByMax = [[], [], [], [], []];
+    const verbSiblings = new Map();
+    const letterPool = [];
+    const letterPoolByMax = [[], [], [], [], []];
+
+    for (let i = 0; i < bank.length; i++) {
+      const w = bank[i];
+      const d = Math.max(1, Math.min(4, w.d || 1));
+      const verb = isVerb(w);
+      for (let t = d; t <= 4; t++) {
+        wordsByMax[t].push(w);
+        if (verb) verbsByMax[t].push(w);
       }
-      let pool = bank.filter((w) => review || w.d <= tier());
-      if (!pool.length) pool = bank.slice();
-      const onScreen = new Set(state.cards.map((c) => c.correct));
-      for (let n = 0; n < 12; n++) {
-        const weights = pool.map((w) => (w.d === tier() ? 4 : isVerb(w) ? 3 : 1));
-        let total = weights.reduce((a, b) => a + b, 0);
-        let r = Math.random() * total;
-        let entry = pool[0];
-        for (let i = 0; i < pool.length; i++) {
-          r -= weights[i];
-          if (r <= 0) { entry = pool[i]; break; }
+      if (verb) {
+        const parts = (w.g || "").split(" · ");
+        if (parts.length >= 3) {
+          const key = parts[0] + "|" + parts[1];
+          let set = verbSiblings.get(key);
+          if (!set) {
+            set = new Set();
+            verbSiblings.set(key, set);
+          }
+          set.add(w.t);
         }
-        if (!onScreen.has(entry.t) && !state.recent.includes(seenKey(entry))) return entry;
       }
-      return pick(pool);
+    }
+
+    function pickFresh(pool) {
+      if (!pool.length) return null;
+      const recent = state.recent;
+      for (let n = 0; n < 10; n++) {
+        const entry = pool[rand(pool.length)];
+        if (!recent.includes(seenKey(entry))) return entry;
+      }
+      return pool[rand(pool.length)];
+    }
+
+    function pickEntry() {
+      const most = review ? 4 : Math.max(1, Math.min(4, Math.max(3, tier())));
+      if (Math.random() < verbShare()) {
+        const verbs = verbsByMax[most];
+        const hit = pickFresh(verbs);
+        if (hit) return hit;
+      }
+      return pickFresh(wordsByMax[review ? 4 : Math.max(1, Math.min(4, tier()))]) || pick(bank);
     }
 
     function wrap(text, maxW, font) {
@@ -488,14 +513,11 @@
     function otherPersons(entry) {
       const parts = (entry.g || "").split(" · ");
       if (parts.length < 3) return new Set();
-      return new Set(
-        bank
-          .filter((w) => {
-            const p = (w.g || "").split(" · ");
-            return p[0] === parts[0] && p[1] === parts[1] && w.t !== entry.t;
-          })
-          .map((w) => w.t)
-      );
+      const set = verbSiblings.get(parts[0] + "|" + parts[1]);
+      if (!set) return new Set();
+      const out = new Set();
+      set.forEach((form) => { if (form !== entry.t) out.add(form); });
+      return out;
     }
 
     // Ne jamais afficher « aiment » tout seul avec l'étiquette nous :
@@ -526,6 +548,14 @@
       return options.length ? pick(options) : null;
     }
 
+    for (let i = 0; i < bank.length; i++) {
+      const w = bank[i];
+      if (!visibleFault(w)) continue;
+      letterPool.push(w);
+      const d = Math.max(1, Math.min(4, w.d || 1));
+      for (let t = d; t <= 4; t++) letterPoolByMax[t].push(w);
+    }
+
     // Dans « pappa », les deux p de « pp » sont de bonnes cibles : on regarde si
     // le mot juste reste écrivable une fois la lettre enlevée.
     function refreshLetters(groupKey) {
@@ -547,18 +577,24 @@
 
     function pickLetterEntry(preferred) {
       if (preferred && visibleFault(preferred)) return preferred;
-      const fresh = bank.filter((w) => visibleFault(w) && !state.recent.includes(seenKey(w)));
-      const pool = fresh.length ? fresh : bank.filter((w) => visibleFault(w));
+      const most = review ? 4 : Math.max(1, Math.min(4, tier()));
+      let pool = letterPoolByMax[most];
+      if (!pool.length) pool = letterPool;
       if (!pool.length) return null;
       if (Math.random() < verbShare()) {
-        const verbs = pool.filter(isVerb);
+        const verbs = [];
+        const recent = state.recent;
+        for (let i = 0; i < pool.length; i++) {
+          const w = pool[i];
+          if (isVerb(w) && !recent.includes(seenKey(w))) verbs.push(w);
+        }
         if (verbs.length) return pick(verbs);
       }
-      return pick(pool);
+      return pickFresh(pool);
     }
 
     function spawnLetters(given) {
-      for (let n = 0; n < 14; n++) {
+      for (let n = 0; n < 8; n++) {
         const entry = n === 0 && given ? given : pickLetterEntry();
         if (!entry) continue;
         const fault = visibleFault(entry);

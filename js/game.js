@@ -454,23 +454,26 @@
       return true;
     }
 
+    function isSubsequence(small, big) {
+      let i = 0;
+      for (const ch of big) if (i < small.length && ch === small[i]) i++;
+      return i === small.length;
+    }
+
     function visibleFault(entry) {
-      if (!entry.t || entry.t.includes(" ")) return null;
+      if (!entry || !entry.t || entry.t.includes(" ")) return null;
       const options = [];
       (entry.b || []).forEach((shown) => {
         if (!shown || shown === entry.t || shown.includes(" ")) return;
         const mask = diffMask(shown, entry.t);
         if (!mask.some(Boolean)) return;
-        if (lettersKept(shown, mask) !== entry.t) return;
+        const extra = shown.length > entry.t.length && isSubsequence(entry.t, shown);
+        const subst = shown.length === entry.t.length;
+        if (!extra && !subst) return;
+        if (extra && lettersKept(shown, mask) !== entry.t && !isSubsequence(entry.t, shown)) return;
         options.push({ shown: shown, mask: mask });
       });
       return options.length ? pick(options) : null;
-    }
-
-    function isSubsequence(small, big) {
-      let i = 0;
-      for (const ch of big) if (i < small.length && ch === small[i]) i++;
-      return i === small.length;
     }
 
     // Dans « pappa », les deux p de « pp » sont de bonnes cibles : on regarde si
@@ -492,9 +495,22 @@
       return rest;
     }
 
+    function pickLetterEntry(preferred) {
+      if (preferred && visibleFault(preferred)) return preferred;
+      const fresh = bank.filter((w) => visibleFault(w) && !state.recent.includes(seenKey(w)));
+      const pool = fresh.length ? fresh : bank.filter((w) => visibleFault(w));
+      if (!pool.length) return null;
+      if (Math.random() < verbShare()) {
+        const verbs = pool.filter(isVerb);
+        if (verbs.length) return pick(verbs);
+      }
+      return pick(pool);
+    }
+
     function spawnLetters(given) {
-      for (let n = 0; n < 12; n++) {
-        const entry = given && n === 0 ? given : pickEntry();
+      for (let n = 0; n < 14; n++) {
+        const entry = n === 0 && given ? given : pickLetterEntry();
+        if (!entry) continue;
         const fault = visibleFault(entry);
         if (!fault) continue;
         const letters = Array.from(fault.shown);
@@ -596,15 +612,17 @@
     function spawn() {
       if (state.cards.length || !bank.length) return;
       const entry = pickEntry();
-      if (isVerb(entry)) {
-        if (spawnVersions(entry) || spawnLetters(entry)) return;
-      }
       const roll = Math.random();
-      const phraseAt = Math.min(0.2, 0.1 + state.elapsed * 0.0004);
-      const versionAt = state.elapsed < 12 ? 0.1 : Math.min(0.38, 0.14 + state.elapsed * 0.0007);
+      const phraseAt = Math.min(0.14, 0.08 + state.elapsed * 0.0003);
+      const letterAt = 0.58;
       if (roll < phraseAt && spawnSentence()) return;
-      if (roll < phraseAt + versionAt && spawnVersions(entry)) return;
-      if (!spawnLetters(entry)) spawnVersions(entry);
+      if (roll < phraseAt + letterAt) {
+        if (spawnLetters(entry) || spawnLetters()) return;
+        spawnVersions(entry);
+        return;
+      }
+      if (spawnVersions(entry) || spawnVersions()) return;
+      spawnLetters();
     }
 
     function pointsFor(base, bonus) {

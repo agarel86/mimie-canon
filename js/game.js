@@ -16,26 +16,26 @@
     slow: "Moins vite : les mots tombent au ralenti.",
     shield: "+ 1 cœur : tu récupères une vie."
   };
-  // Une phrase découpée. cut = true : ce morceau est en trop, il faut l'effacer.
+  // Une phrase, un mot par bloc. cut = true : ce mot est en trop, il faut l'effacer.
   const PHRASES = [
-    { text: "Les chats calmes", parts: [["Les chats", false], ["calme", true, "calmes"], ["calmes", false]] },
-    { text: "La fille contente", parts: [["La fille", false], ["content", true, "contente"], ["contente", false]] },
-    { text: "Les petits chats", parts: [["Les", false], ["petit", true, "petits"], ["petits chats", false]] },
-    { text: "Des chevaux noirs", parts: [["Des", false], ["chevals", true, "chevaux"], ["chevaux noirs", false]] },
-    { text: "Il est grand", parts: [["Il", false], ["sont", true, "est"], ["est grand", false]] },
-    { text: "Elles sont grandes", parts: [["Elles", false], ["est", true, "sont"], ["sont grandes", false]] },
-    { text: "Tu manges une pomme", parts: [["Tu", false], ["mange", true, "manges"], ["manges une pomme", false]] },
-    { text: "Nous allons à l'école", parts: [["Nous", false], ["va", true, "allons"], ["allons à l'école", false]] },
-    { text: "Le chat dort", parts: [["Le chat", false], ["mangent", true, "dort"], ["dort", false]] },
-    { text: "Les filles travaillent", parts: [["Les filles", false], ["travaille", true, "travaillent"], ["travaillent", false]] },
-    { text: "Mon chien aboie", parts: [["Mon", false], ["chiens", true, "chien"], ["chien aboie", false]] },
-    { text: "Une grande maison", parts: [["Une", false], ["grands", true, "grande"], ["grande maison", false]] },
-    { text: "Je vais au parc", parts: [["Je", false], ["allons", true, "vais"], ["vais au parc", false]] },
-    { text: "Ces fleurs sont belles", parts: [["Ces fleurs", false], ["est", true, "sont"], ["sont belles", false]] },
-    { text: "Le petit chat", parts: [["Le", false], ["la", true, "en trop"], ["petit chat", false]] },
-    { text: "Les enfants jouent", parts: [["Les", false], ["enfant", true, "enfants"], ["enfants jouent", false]] },
+    { text: "Il est grand", parts: [["Il", false], ["est", false], ["sont", true, "est"], ["grand", false]] },
+    { text: "Elles sont grandes", parts: [["Elles", false], ["est", true, "sont"], ["sont", false], ["grandes", false]] },
+    { text: "Les chats calmes", parts: [["Les", false], ["chats", false], ["calme", true, "calmes"], ["calmes", false]] },
+    { text: "La fille contente", parts: [["La", false], ["fille", false], ["content", true, "contente"], ["contente", false]] },
+    { text: "Les petits chats", parts: [["Les", false], ["petit", true, "petits"], ["petits", false], ["chats", false]] },
+    { text: "Des chevaux noirs", parts: [["Des", false], ["chevals", true, "chevaux"], ["chevaux", false], ["noirs", false]] },
+    { text: "Tu manges une pomme", parts: [["Tu", false], ["mange", true, "manges"], ["manges", false], ["une", false], ["pomme", false]] },
+    { text: "Nous allons à l'école", parts: [["Nous", false], ["va", true, "allons"], ["allons", false], ["à", false], ["l'école", false]] },
+    { text: "Le chat dort", parts: [["Le", false], ["chat", false], ["mangent", true, "dort"], ["dort", false]] },
+    { text: "Les filles travaillent", parts: [["Les", false], ["filles", false], ["travaille", true, "travaillent"], ["travaillent", false]] },
+    { text: "Mon chien aboie", parts: [["Mon", false], ["chiens", true, "chien"], ["chien", false], ["aboie", false]] },
+    { text: "Une grande maison", parts: [["Une", false], ["grands", true, "grande"], ["grande", false], ["maison", false]] },
+    { text: "Je vais au parc", parts: [["Je", false], ["allons", true, "vais"], ["vais", false], ["au", false], ["parc", false]] },
+    { text: "Ces fleurs sont belles", parts: [["Ces", false], ["fleurs", false], ["est", true, "sont"], ["sont", false], ["belles", false]] },
+    { text: "Le petit chat", parts: [["Le", false], ["la", true], ["petit", false], ["chat", false]] },
+    { text: "Les enfants jouent", parts: [["Les", false], ["enfant", true, "enfants"], ["enfants", false], ["jouent", false]] },
     { text: "Les chats calmes", parts: [["Les", false], ["chat", true, "chats"], ["chats", false], ["calme", true, "calmes"], ["calmes", false]] },
-    { text: "Le chat dort", parts: [["Le", false], ["la", true, "en trop"], ["petit", true, "en trop"], ["chat dort", false]] }
+    { text: "Il est grand", parts: [["Il", false], ["sont", true, "est"], ["est", false], ["grands", true, "grand"], ["grand", false]] }
   ];
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -402,10 +402,10 @@
     }
 
     function spawnSentence() {
-      const narrow = state.width < 560;
-      const pool = PHRASES.filter((phrase) => phrase.parts.length <= (narrow ? 3 : 5));
+      const maxParts = state.width < 420 ? 5 : 6;
+      const pool = PHRASES.filter((phrase) => phrase.parts.length <= maxParts);
       if (!pool.length) return false;
-      for (let attempt = 0; attempt < 8; attempt++) {
+      for (let attempt = 0; attempt < 10; attempt++) {
         const phrase = pick(pool);
         const group = "p" + (state.sentenceSeq || 0);
         const cards = phrase.parts.map((part, index) => {
@@ -413,29 +413,27 @@
           const cut = part[1];
           const fix = part[2] || phrase.text;
           const entry = { t: cut ? phrase.text : text, b: [text], g: "phrase" };
-          const card = makeCard(entry, cut, PALETTE[index % PALETTE.length], index % 4, false, true);
+          const card = makeCard(entry, cut, PALETTE[index % PALETTE.length], index % 4, false, true, false);
           card.group = group;
           card.pair = 1;
+          card.kind = "phrase";
           card.hint = cut ? fix : text;
           card.mask = cut ? diffMask(text, fix) : null;
+          card.w = Math.max(48, Math.min(card.w, 110));
+          card.h = Math.max(52, Math.min(card.h, 64));
           return card;
         });
-        const gap = 8;
-        const total = cards.reduce((sum, card) => sum + card.w, 0) + gap * (cards.length - 1);
-        if (total + 16 > state.width) continue;
-        let x = Math.max(8, (state.width - total) / 2);
         const y = spawnTop();
-        cards.forEach((card) => {
-          card.baseX = x;
-          card.y = y;
-          x += card.w + gap;
-        });
+        if (!placeRow(cards, y, 6)) {
+          cards.forEach((card) => { card.w = Math.max(44, card.w * 0.84); });
+          if (!placeRow(cards, y, 4)) continue;
+        }
         state.sentenceSeq = (state.sentenceSeq || 0) + 1;
         state.groups[group] = { text: phrase.text, label: "phrase", left: cards.length, failed: false, kind: "phrase" };
         state.cards.push(...cards);
         if (!state.sentenceTold) {
           state.sentenceTold = true;
-          toast("Phrase en morceaux : efface seulement ce qui est en trop.");
+          toast("Phrase mot par mot : efface seulement le mot en trop.");
         }
         return true;
       }
@@ -602,7 +600,7 @@
         if (spawnVersions(entry) || spawnLetters(entry)) return;
       }
       const roll = Math.random();
-      const phraseAt = state.elapsed < 16 ? 0 : Math.min(0.18, 0.07 + state.elapsed * 0.0004);
+      const phraseAt = Math.min(0.2, 0.1 + state.elapsed * 0.0004);
       const versionAt = state.elapsed < 12 ? 0.1 : Math.min(0.38, 0.14 + state.elapsed * 0.0007);
       if (roll < phraseAt && spawnSentence()) return;
       if (roll < phraseAt + versionAt && spawnVersions(entry)) return;

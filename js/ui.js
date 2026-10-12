@@ -38,10 +38,12 @@
       cards: [{ chip: "tourner · présent · ils/elles", word: "tournent", cls: "good" }]
     },
     {
-      text: "Parfois une phrase tombe en mots. Efface seulement le mot en trop, pour que la phrase soit juste.",
+      text: "Parfois une phrase tombe mot par mot. Exemple : Il · est · sont · grand. Efface seulement le mot en trop.",
       cards: [
-        { chip: "phrase", word: "calme", cls: "bad" },
-        { chip: "phrase", word: "calmes", cls: "good" }
+        { chip: "phrase", word: "Il", cls: "good" },
+        { chip: "phrase", word: "est", cls: "good" },
+        { chip: "phrase", word: "sont", cls: "bad" },
+        { chip: "phrase", word: "grand", cls: "good" }
       ]
     },
     {

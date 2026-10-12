@@ -27,10 +27,12 @@
     },
     shoot() { this.tone(540, 0, 0.07, "triangle", 0.04); },
     ok() {
-      this.tone(523, 0, 0.07, "triangle", 0.06);
-      this.tone(659, 0.05, 0.08, "triangle", 0.055);
-      this.tone(784, 0.1, 0.09, "triangle", 0.05);
-      this.tone(1046, 0.16, 0.14, "sine", 0.04);
+      this.tone(98, 0, 0.18, "triangle", 0.07);
+      this.tone(196, 0.02, 0.12, "sawtooth", 0.03);
+      this.tone(523, 0.04, 0.08, "triangle", 0.055);
+      this.tone(784, 0.1, 0.1, "triangle", 0.05);
+      this.tone(1175, 0.16, 0.14, "sine", 0.045);
+      this.tone(1568, 0.22, 0.12, "sine", 0.03);
     },
     spare() { this.tone(698, 0, 0.1, "sine", 0.04); },
     bad() {

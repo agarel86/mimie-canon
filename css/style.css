@@ -66,8 +66,8 @@ body.playing { overflow: hidden; }
 h1, h2, p { margin: 0; }
 h1 {
   font-family: Fredoka, "Trebuchet MS", sans-serif;
-  font-size: 3rem;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.2rem, 8vw, 3.1rem);
+  letter-spacing: 0.04em;
   margin-top: 4px;
 }
 h2 {

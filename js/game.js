@@ -642,14 +642,13 @@
       state.score += gained;
       state.successes.push({ g: card.chip, correct: card.correct });
       grantPower();
-      burst(card, "#ffe38a", true);
-      burst(card, "#ffffff", false);
+      burst(card, true);
       state.floaters.push({
         x: card.baseX + card.w / 2,
         y: card.y + card.h / 2,
-        life: 0.7,
-        max: 0.7,
-        small: "BIEN !",
+        life: 0.85,
+        max: 0.85,
+        small: card.kind === "letter" ? "BOUM !" : "BIEN !",
         big: card.hint || card.correct,
         strike: false,
         color: "#128a52",
@@ -674,7 +673,7 @@
         correct: card.correct,
         shown: card.fault || card.shown
       });
-      burst(card, "#ff4d6a");
+      burst(card, false);
       const missed = kind === "faute-passee";
       const letter = card.kind === "letter";
       state.floaters.push({
@@ -787,29 +786,74 @@
       finishGroup(card, true);
     }
 
-    function burst(card, color, big) {
+    function burst(card, happy) {
       const x = card.baseX + card.w / 2;
       const y = card.y + card.h / 2;
-      if (big) {
-        state.waves.push({ x: x, y: y, life: 0.26, max: 0.26 });
-        state.kick = reduced ? 0 : 10;
+      const letter = happy && card.kind === "letter";
+      if (happy) {
+        state.waves.push({ x: x, y: y, life: 0.32, max: 0.32, r: 88, color: "255, 214, 90" });
+        state.waves.push({ x: x, y: y, life: 0.55, max: 0.55, r: 160, color: "255, 248, 230" });
+        if (letter) state.waves.push({ x: x, y: y, life: 0.4, max: 0.4, r: 120, color: "255, 107, 74" });
+        state.kick = reduced ? 0 : (letter ? 14 : 10);
         state.hitSlow = reduced ? 0 : 0.08;
         punchFlash("good");
       }
       if (reduced) return;
-      const count = big ? 24 : 10;
-      for (let i = 0; i < count; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const s = (big ? 80 : 36) + Math.random() * (big ? 180 : 100);
+      const golds = happy
+        ? ["#fffce8", "#ffe38a", "#ffc14d", "#ff9f1c", "#ff6b4a", "#fff"]
+        : ["#ff8fa0", "#ff4d6a", "#c4374a"];
+      const sparks = letter ? 28 : happy ? 18 : 10;
+      for (let i = 0; i < sparks; i++) {
+        const a = (Math.PI * 2 * i) / sparks + Math.random() * 0.2;
+        const s = (letter ? 140 : 90) + Math.random() * (letter ? 260 : 160);
         state.particles.push({
+          kind: "spark",
           x: x,
           y: y,
           vx: Math.cos(a) * s,
-          vy: Math.sin(a) * s - (big ? 40 : 20),
-          life: 0.28 + Math.random() * 0.12,
-          color: color,
-          r: (big ? 3 : 2) + Math.random() * (big ? 4 : 3)
+          vy: Math.sin(a) * s - 50,
+          life: 0.45 + Math.random() * 0.2,
+          max: 0.65,
+          color: golds[i % golds.length],
+          r: letter ? 3 + Math.random() * 3 : 2 + Math.random() * 2,
+          len: (letter ? 16 : 10) + Math.random() * 14
         });
+      }
+      const dots = letter ? 22 : 12;
+      for (let i = 0; i < dots; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 40 + Math.random() * (letter ? 200 : 120);
+        state.particles.push({
+          kind: "dot",
+          x: x,
+          y: y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s - 30,
+          life: 0.5 + Math.random() * 0.22,
+          max: 0.72,
+          color: golds[rand(golds.length)],
+          r: 2 + Math.random() * (letter ? 6 : 4)
+        });
+      }
+      if (letter && card.shown) {
+        for (let i = 0; i < 6; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const s = 80 + Math.random() * 140;
+          state.particles.push({
+            kind: "glyph",
+            x: x,
+            y: y,
+            vx: Math.cos(a) * s,
+            vy: Math.sin(a) * s - 80,
+            life: 0.55 + Math.random() * 0.18,
+            max: 0.73,
+            color: "#243044",
+            text: card.shown,
+            rot: Math.random() * 6,
+            spin: (Math.random() - 0.5) * 10,
+            size: 18 + Math.random() * 10
+          });
+        }
       }
     }
 
@@ -1104,10 +1148,12 @@
       state.particles.forEach((p) => {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.vy += 180 * dt;
+        p.vy += (p.kind === "spark" ? 40 : 220) * dt;
+        p.vx *= 0.98;
+        if (p.spin) p.rot = (p.rot || 0) + p.spin * dt;
         p.life -= dt;
       });
-      state.particles = state.particles.filter((p) => p.life > 0).slice(-120);
+      state.particles = state.particles.filter((p) => p.life > 0).slice(-220);
       state.waves.forEach((wave) => { wave.life -= dt; });
       state.waves = state.waves.filter((wave) => wave.life > 0);
       state.beams.forEach((beam) => { beam.life -= dt; });
@@ -1446,12 +1492,32 @@
       drawPhraseLinks();
       state.cards.forEach(drawCard);
       state.particles.forEach((p) => {
-        ctx.globalAlpha = Math.max(0, p.life * 2);
+        const alpha = Math.max(0, p.life / (p.max || 0.4));
+        ctx.save();
+        ctx.globalAlpha = alpha;
         ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+        if (p.kind === "spark") {
+          ctx.translate(p.x, p.y);
+          ctx.rotate(Math.atan2(p.vy, p.vx));
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 8;
+          roundRect(ctx, -p.len / 2, -p.r / 2, p.len, p.r, p.r / 2);
+          ctx.fill();
+        } else if (p.kind === "glyph") {
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot || 0);
+          ctx.font = "700 " + (p.size || 22) + "px " + FONT;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(p.text, 0, 0);
+        } else {
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
       });
       state.beams.forEach((beam) => {
         const t = Math.max(0, beam.life / beam.max);
@@ -1483,10 +1549,11 @@
       drawCannon();
       state.waves.forEach((wave) => {
         const t = 1 - wave.life / wave.max;
+        const rgb = wave.color || "255, 252, 240";
         ctx.beginPath();
-        ctx.strokeStyle = "rgba(255, 252, 240, " + ((1 - t) * 0.8) + ")";
-        ctx.lineWidth = 5 * (1 - t) + 1;
-        ctx.arc(wave.x, wave.y, 16 + t * 72, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(" + rgb + ", " + ((1 - t) * 0.85) + ")";
+        ctx.lineWidth = 7 * (1 - t) + 1.5;
+        ctx.arc(wave.x, wave.y, 10 + t * (wave.r || 72), 0, Math.PI * 2);
         ctx.stroke();
       });
       drawFloaters();

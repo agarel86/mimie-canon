@@ -6,7 +6,7 @@
     "La couleur aide à distinguer, pas à tricher.",
     "Série de 4 : voir les fautes, ralentir, ou un cœur.",
     "Le carnet garde les fautes à revoir.",
-    "Les étiquettes disent le temps et la personne."
+    "L'annonce au-dessus dit nom, adjectif, ou verbe avec la personne."
   ];
   const SLIDES = [
     {
@@ -34,8 +34,8 @@
       ]
     },
     {
-      text: "L'étiquette au-dessus dit ce que c'est. Pour un verbe, tu vois le temps et la personne : il faut la bonne terminaison.",
-      cards: [{ chip: "tourner · présent · ils/elles", word: "tournent", cls: "good" }]
+      text: "L'annonce au-dessus dit ce que c'est. Verbe : tu vois le temps et la personne. Il faut la forme qui va avec, par exemple ils, elles → tournent.",
+      cards: [{ chip: "Verbe · tourner", word: "tournent", cls: "good" }]
     },
     {
       text: "Parfois une phrase tombe mot par mot. Exemple : Il · est · sont · grand. Efface seulement le mot en trop.",
@@ -48,7 +48,7 @@
     },
     {
       text: "Après 4 réussites d'affilée : Voir fautes met les lettres pièges en rouge. Moins vite ralentit les mots. + 1 cœur rend une vie.",
-      cards: [{ chip: "être · présent · tu", word: "es", cls: "" }]
+      cards: [{ chip: "Verbe · être", word: "es", cls: "" }]
     }
   ];
 

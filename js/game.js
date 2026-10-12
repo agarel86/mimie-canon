@@ -231,7 +231,7 @@
     }
 
     function spawnTop() {
-      return 18;
+      return 78;
     }
 
     function muzzlePoint() {
@@ -312,6 +312,51 @@
       return / · (présent|futur|imparfait|passé composé|impératif) · /.test(entry.g);
     }
 
+    function personKid(person) {
+      return String(person || "")
+        .replace(/il\/elle/g, "il, elle")
+        .replace(/ils\/elles/g, "ils, elles")
+        .replace(/je · garçon/g, "je (garçon)")
+        .replace(/je · fille/g, "je (fille)")
+        .replace(/tu · garçon/g, "tu (garçon)")
+        .replace(/tu · fille/g, "tu (fille)")
+        .replace(/nous · garçons/g, "nous (garçons)")
+        .replace(/nous · filles/g, "nous (filles)");
+    }
+
+    function annonce(g) {
+      if (!g || g === "phrase") return { kicker: "Phrase", detail: "" };
+      if (g === "On va ___") return { kicker: "Verbe", detail: "infinitif" };
+      if (g.includes("___")) return { kicker: "Mot", detail: g };
+      const parts = String(g).split(" · ");
+      if (parts.length >= 3 && /^(présent|futur|imparfait|passé composé|impératif)$/.test(parts[1])) {
+        return {
+          kicker: "Verbe · " + parts[0],
+          detail: parts[1] + " · " + personKid(parts.slice(2).join(" · "))
+        };
+      }
+      if (g.startsWith("adjectif")) {
+        let detail = "";
+        if (/invariable/.test(g)) detail = "ne change pas";
+        else if (/masculin/.test(g) && /féminin/.test(g)) detail = /pluriel/.test(g) ? "plusieurs" : "un ou une";
+        else if (/féminin/.test(g)) detail = /pluriel/.test(g) ? "des filles" : "une fille";
+        else if (/masculin/.test(g)) detail = /pluriel/.test(g) ? "des garçons" : "un garçon";
+        return { kicker: "Adjectif", detail: detail };
+      }
+      if (g.startsWith("déterminant")) return { kicker: "Déterminant", detail: personKid(g.replace(/^déterminant · /, "")) };
+      if (g.startsWith("invariable")) {
+        if (/nombre/.test(g)) return { kicker: "Nombre", detail: "" };
+        return { kicker: "Mot invariable", detail: "" };
+      }
+      if (g.startsWith("nom")) {
+        let detail = "";
+        if (/pluriel/.test(g)) detail = "plusieurs";
+        else if (/singulier/.test(g)) detail = "un seul";
+        return { kicker: "Nom", detail: detail };
+      }
+      return { kicker: "Mot", detail: "" };
+    }
+
     function verbShare() {
       if (review) return 0;
       if (state.elapsed < 14) return 0.42;
@@ -326,11 +371,13 @@
     const wordsByMax = [[], [], [], [], []];
     const verbsByMax = [[], [], [], [], []];
     const verbSiblings = new Map();
+    const realWords = new Set();
     const letterPool = [];
     const letterPoolByMax = [[], [], [], [], []];
 
     for (let i = 0; i < bank.length; i++) {
       const w = bank[i];
+      if (w.t) realWords.add(w.t);
       const d = Math.max(1, Math.min(4, w.d || 1));
       const verb = isVerb(w);
       for (let t = d; t <= 4; t++) {
@@ -531,12 +578,20 @@
       return otherPersons(entry).has(shown);
     }
 
+    // « droite » n'est pas une faute de « droits » : c'est un autre mot juste.
+    function confusesLex(entry, shown) {
+      if (!shown || shown === entry.t) return false;
+      if (!realWords.has(shown)) return false;
+      if ((entry.g || "").includes("___")) return false;
+      return true;
+    }
+
     function visibleFault(entry) {
       if (!entry || !entry.t || entry.t.includes(" ")) return null;
       const options = [];
       (entry.b || []).forEach((shown) => {
         if (!shown || shown === entry.t || shown.includes(" ")) return;
-        if (confusesPerson(entry, shown)) return;
+        if (confusesPerson(entry, shown) || realWords.has(shown)) return;
         const mask = diffMask(shown, entry.t);
         if (!mask.some(Boolean)) return;
         const extra = shown.length > entry.t.length && isSubsequence(entry.t, shown);
@@ -650,7 +705,11 @@
       const wantThree = maxCards() >= 3 && Math.random() < 0.5;
       for (let n = 0; n < 10; n++) {
         const entry = given && n === 0 ? given : pickEntry();
-        const wrongs = (entry.b || []).filter((word) => word && word !== entry.t);
+        const wrongs = (entry.b || []).filter((word) => {
+          if (!word || word === entry.t) return false;
+          if (confusesPerson(entry, word) || confusesLex(entry, word)) return false;
+          return true;
+        });
         if (!wrongs.length) continue;
         const take = wantThree && wrongs.length >= 2 ? 2 : 1;
         const picked = [];
@@ -793,10 +852,12 @@
       grantPower();
       burst(card, true);
       const word = bannerWord(card);
+      const shown = annonce(card.chip);
+      const headline = card.kind === "letter" ? "BOUM !" : "BIEN !";
       pushBanner(card, true, {
         life: 1.05,
         max: 1.05,
-        small: card.kind === "letter" ? "BOUM !" : "BIEN !",
+        small: shown.kicker === "Phrase" ? headline : headline + "  " + shown.kicker,
         big: word,
         points: "+" + gained
       });
@@ -1574,6 +1635,41 @@
       });
     }
 
+    function drawAnnonce(cx, top, shown) {
+      ctx.save();
+      const maxW = Math.max(120, state.width - 28);
+      let kSize = 20;
+      ctx.font = "800 " + kSize + "px " + CHIP;
+      while (kSize > 14 && ctx.measureText(shown.kicker).width > maxW - 28) {
+        kSize -= 1;
+        ctx.font = "800 " + kSize + "px " + CHIP;
+      }
+      const kickerW = ctx.measureText(shown.kicker).width;
+      ctx.font = "800 14px " + CHIP;
+      const detailW = shown.detail ? ctx.measureText(shown.detail).width : 0;
+      const w = Math.min(maxW, Math.max(kickerW, detailW) + 28);
+      const h = shown.detail ? 44 : 28;
+      const x = Math.max(8, Math.min(cx - w / 2, state.width - w - 8));
+      const y = top - h - 6;
+      ctx.fillStyle = "rgba(255, 253, 248, 0.96)";
+      ctx.strokeStyle = "rgba(29, 78, 137, 0.28)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, w, h, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#1d4e89";
+      ctx.font = "800 " + kSize + "px " + CHIP;
+      ctx.fillText(shown.kicker, x + w / 2, shown.detail ? y + 14 : y + h / 2);
+      if (shown.detail) {
+        ctx.fillStyle = "#3d5678";
+        ctx.font = "800 14px " + CHIP;
+        ctx.fillText(shown.detail, x + w / 2, y + 32);
+      }
+      ctx.restore();
+    }
+
     function drawPhraseLinks() {
       const groups = {};
       state.cards.forEach((card) => {
@@ -1587,19 +1683,17 @@
       ctx.lineCap = "round";
       Object.keys(groups).forEach((key) => {
         const list = groups[key];
-        if (list.length < 2) return;
+        if (!list.length) return;
         list.sort((a, b) => a.baseX - b.baseX);
         const meta = state.groups[key];
+        const left = list[0].x;
+        const right = list[list.length - 1].x + list[list.length - 1].w;
+        const top = Math.min.apply(null, list.map((card) => card.y));
+        const cx = (left + right) / 2;
         if (meta && meta.label) {
-          const left = list[0].x;
-          const right = list[list.length - 1].x + list[list.length - 1].w;
-          const top = Math.min.apply(null, list.map((card) => card.y));
-          ctx.fillStyle = "#1d4e89";
-          ctx.font = "800 14px " + CHIP;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "bottom";
-          ctx.fillText(meta.label, (left + right) / 2, top - 6, Math.max(40, right - left));
+          drawAnnonce(cx, top, annonce(meta.label));
         }
+        if (list.length < 2) return;
         const y = list[0].y + list[0].h / 2;
         ctx.beginPath();
         ctx.moveTo(list[0].x + list[0].w - 4, y);

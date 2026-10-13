@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1224">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>CALCTETRIS</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧱%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+  <div id="app">
+    <section id="menu" class="screen on">
+      <p class="eyebrow">CE2 · calculs + pièces</p>
+      <h1>CALCTETRIS</h1>
+      <p class="sub">Tu réponds, puis tu places la pièce. Pas de chrono sur le calcul.</p>
+      <p class="best">Meilleur score : <strong id="best">0</strong></p>
+      <p class="label">Tu travailles</p>
+      <div class="modes" id="modes">
+        <button type="button" class="mode on" data-mode="mix">Tout mélangé</button>
+        <button type="button" class="mode" data-mode="add">Additions +</button>
+        <button type="button" class="mode" data-mode="sub">Soustractions −</button>
+        <button type="button" class="mode" data-mode="mul">Multiplications ×</button>
+        <button type="button" class="mode" data-mode="div">Divisions ÷</button>
+      </div>
+      <button type="button" class="btn xl" id="btn-start">Jouer</button>
+      <a class="back" href="../">Autres jeux</a>
+    </section>
+
+    <section id="game" class="screen">
+      <header class="hud">
+        <div class="hud-stats">
+          <span>Score <strong id="score">0</strong></span>
+          <span>Niveau <strong id="level">1</strong></span>
+          <span>Série <strong id="streak">0</strong></span>
+        </div>
+        <div class="hud-actions">
+          <button type="button" class="icon" id="btn-mute" aria-label="Son">Son</button>
+          <button type="button" class="icon" id="btn-pause" aria-label="Pause">Pause</button>
+        </div>
+      </header>
+
+      <div id="stage">
+        <div id="board-wrap">
+          <canvas id="cv" aria-label="Grille Tetris"></canvas>
+        </div>
+        <aside id="panel">
+          <div class="next-box">
+            <p>Prochaine pièce</p>
+            <canvas id="next" width="120" height="80"></canvas>
+          </div>
+          <div id="calc-card">
+            <p class="calc-kicker" id="calc-kicker">À toi de calculer</p>
+            <p id="calc">?</p>
+            <p id="typed" class="typed"> </p>
+            <p id="msg" class="msg" role="status"></p>
+            <div id="numpad" aria-label="Clavier numérique">
+              <button type="button" data-k="1">1</button>
+              <button type="button" data-k="2">2</button>
+              <button type="button" data-k="3">3</button>
+              <button type="button" data-k="4">4</button>
+              <button type="button" data-k="5">5</button>
+              <button type="button" data-k="6">6</button>
+              <button type="button" data-k="7">7</button>
+              <button type="button" data-k="8">8</button>
+              <button type="button" data-k="9">9</button>
+              <button type="button" data-k="del" class="ghost">⌫</button>
+              <button type="button" data-k="0">0</button>
+              <button type="button" data-k="ok" class="ok">OK</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <nav id="moves" aria-label="Déplacer la pièce">
+        <button type="button" data-move="left" aria-label="Gauche">←</button>
+        <button type="button" data-move="rot" aria-label="Tourner">↻</button>
+        <button type="button" data-move="right" aria-label="Droite">→</button>
+        <button type="button" data-move="down" aria-label="Descendre">↓</button>
+        <button type="button" data-move="drop" aria-label="Lâcher">⇊</button>
+      </nav>
+    </section>
+  </div>
+
+  <div id="pause" class="overlay" hidden>
+    <div class="sheet">
+      <h2>Pause</h2>
+      <p>Le calcul n’a pas de chrono. Prends ton temps.</p>
+      <button type="button" class="btn xl" id="btn-resume">Continuer</button>
+      <button type="button" class="btn ghost" id="btn-restart">Recommencer</button>
+      <button type="button" class="link" id="btn-quit">Accueil</button>
+    </div>
+  </div>
+
+  <div id="bonus" class="overlay" hidden>
+    <div class="sheet">
+      <h2>3 justes d’affilée !</h2>
+      <p>Tu choisis ton bonus.</p>
+      <button type="button" class="btn xl" id="btn-slow">Pièce lente</button>
+      <button type="button" class="btn" id="btn-clear">Enlever une ligne</button>
+    </div>
+  </div>
+
+  <div id="over" class="overlay" hidden>
+    <div class="sheet wide">
+      <h2 id="over-title">Belle partie !</h2>
+      <p class="over-score" id="over-score">0</p>
+      <p id="over-detail" class="hint"></p>
+      <div id="over-ops" class="ops"></div>
+      <div id="over-miss" class="miss"></div>
+      <button type="button" class="btn xl" id="btn-again">Rejouer</button>
+      <button type="button" class="link" id="btn-home">Accueil</button>
+    </div>
+  </div>
+
+  <script src="game.js?v=4"></script>
+</body>
+</html>

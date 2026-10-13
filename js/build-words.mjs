@@ -31,9 +31,93 @@ function uniqueWrongs(correct, wrongs) {
   return out;
 }
 
+function foldDoubles(s) {
+  return String(s).replace(/([bcdfghjklmnpqrstvwxzç])\1+/gi, "$1");
+}
+
+function faultKind(correct, wrong) {
+  if (!wrong || wrong === correct) return "";
+  const a = noAccent(correct);
+  const b = noAccent(wrong);
+  if (a === b) return String(correct).length <= 3 ? "other" : "accent";
+  if (foldDoubles(a) === foldDoubles(b)) return "double";
+  return "other";
+}
+
+function suggestCe2(correct) {
+  const s = String(correct);
+  const out = [];
+  const add = (w) => {
+    if (!w || w === s || w.includes(" ") || out.includes(w)) return;
+    out.push(w);
+  };
+  if (s.endsWith("eau")) {
+    add(s.slice(0, -3) + "au");
+    add(s.slice(0, -3) + "o");
+    add(s + "x");
+  }
+  if (s.endsWith("au") && !s.endsWith("eau")) add(s + "x");
+  if (s.endsWith("aux")) {
+    add(s.slice(0, -3) + "aus");
+    add(s.slice(0, -3) + "als");
+  }
+  if (s.endsWith("eux")) add(s.slice(0, -3) + "eus");
+  if (s.endsWith("tion")) {
+    add(s.replace("tion", "sion"));
+    add(s.replace("tion", "cion"));
+  }
+  if (s.includes("ph")) add(s.replace("ph", "f"));
+  if (s.includes("qu")) add(s.replace("qu", "c"));
+  if (s.includes("gn")) add(s.replace("gn", "ni"));
+  if (s.includes("ill")) add(s.replace("ill", "il"));
+  if (s.includes("ç")) add(s.replace("ç", "ss"));
+  if (s.includes("y") && s.indexOf("y") > 0) add(s.replace("y", "i"));
+  if (s.includes("oi")) add(s.replace("oi", "oa"));
+  const gem = s.match(/([bcdfghjklmnpqrstvwxzç])\1/i);
+  if (gem) add(s.replace(gem[0], gem[1]));
+  if (s.endsWith("t") && s.length > 3) add(s + "e");
+  if (s.endsWith("d") && s.length > 3) add(s.slice(0, -1));
+  if (s.endsWith("er") && s.length > 3) add(s.slice(0, -1));
+  if (!s.endsWith("e") && s.length > 3 && /[nrl]$/.test(s)) add(s + "e");
+  if (s.endsWith("e") && s.length > 4) add(s + "s");
+  if (/^[aeiouéèêàù]/i.test(s) && s.length > 3) add("h" + s);
+  if (s.endsWith("s") && s.length > 4 && !s.endsWith("es")) add(s.slice(0, -1) + "t");
+  return out;
+}
+
 function enrich(correct, wrongs) {
-  const extra = noAccent(correct);
-  return uniqueWrongs(correct, [...wrongs, extra === correct ? null : extra]);
+  const given = uniqueWrongs(correct, wrongs);
+  const suggested = suggestCe2(correct);
+  const picked = [];
+  let nAccent = 0;
+  let nDouble = 0;
+  const take = (w, allowAccent, allowDouble) => {
+    if (!w || w === correct || picked.includes(w)) return;
+    const kind = faultKind(correct, w);
+    if (!kind) return;
+    if (kind === "accent") {
+      if (!allowAccent || nAccent >= 1) return;
+      nAccent += 1;
+    } else if (kind === "double") {
+      if (!allowDouble || nDouble >= 1) return;
+      if (!/([bcdfghjklmnpqrstvwxzç])\1/i.test(correct)) return;
+      nDouble += 1;
+    }
+    picked.push(w);
+  };
+  given.forEach((w) => take(w, false, false));
+  suggested.forEach((w) => take(w, false, false));
+  given.concat(suggested).forEach((w) => take(w, false, true));
+  if (picked.length < 2) {
+    given.concat(suggested).forEach((w) => take(w, true, true));
+    take(noAccent(correct), true, true);
+  }
+  if (!picked.length) {
+    const stripped = noAccent(correct);
+    if (stripped !== correct) picked.push(stripped);
+    else if (correct.length > 3) picked.push(correct + "e");
+  }
+  return picked.slice(0, 4);
 }
 
 function addItem(t, wrongs, d, g) {
@@ -3279,7 +3363,24 @@ const EXTRA_CE2 = [
   ["univers", ["unnivers", "universe", "univer"], 2, "nom"],
   ["trou", ["trrou", "troue", "tro"], 1, "nom"]
 ];
-for (const [t, b, d, g] of EXTRA_CE2) addItem(t, b, d, g);
+const SKIP_EXTRA = new Set(`
+  antilope autruche bison blaireau cabri caméléon canari castor cerf chacal
+  chameau chamois cigogne colibri daim dindon dromadaire faisan faucon flamant
+  fouine frelon gazelle geai gorille hippocampe hyène iguane jaguar léopard
+  loutre lynx manchot marmotte méduse morse orque otarie ouistiti panthère
+  paon pélican perruche pinson pieuvre poulpe puma renne rossignol sauterelle
+  scorpion toucan vautour vison yak furet macaque ragondin ramier silure
+  tarentule tique truies vermisseau pintade perdrix souriceau girafeau
+  ouistiti buse cabri fauve têtard vison
+  cirrus boréale comète halo supernova meseta hamada palétuvier aquifère
+  myrrhe tintamarre embarras vasistas soffite jerrican
+  prestidigitateur océanographe métallurgiste commissaire parquetiste
+  orthodontiste ostéopathe webmestre barista
+`.trim().split(/\s+/));
+for (const [t, b, d, g] of EXTRA_CE2) {
+  if (SKIP_EXTRA.has(t) || t.length > 12) continue;
+  addItem(t, b, d, g);
+}
 
 
 
@@ -3881,6 +3982,30 @@ const IMPARFAIT_NOUS = {
 };
 for (const [inf, nous] of Object.entries(IMPARFAIT_NOUS)) addImparfait(inf, nous, 4);
 
+function hasTense(inf, tense) {
+  const prefix = inf + " · " + tense + " · ";
+  return bank.some((w) => (w.g || "").startsWith(prefix));
+}
+
+const ER_LIVING = [
+  "jouer", "chanter", "parler", "regarder", "écouter", "habiter", "donner",
+  "chercher", "arriver", "entrer", "laver", "aider", "travailler", "dessiner",
+  "sauter", "marcher", "ranger", "préparer", "nager", "penser", "rêver",
+  "crier", "visiter", "compter", "fermer", "allumer", "tourner", "gagner",
+  "danser", "inviter", "cacher", "garder", "tomber", "rester", "manger",
+  "aimer", "apporter", "demander", "raconter", "porter", "trouver"
+];
+for (const inf of ER_LIVING) {
+  const nous = presentEr(inf)[3][1];
+  if (!hasTense(inf, "imparfait")) addImparfait(inf, nous, 3);
+  if (!hasTense(inf, "futur")) addFutur(inf, inf, 3, [inf.slice(0, -2) + "é"]);
+}
+for (const inf of ["finir", "choisir", "grandir", "réussir", "attendre", "entendre", "perdre", "vendre"]) {
+  const nous = bank.find((w) => w.g === inf + " · présent · nous");
+  if (nous && !hasTense(inf, "imparfait")) addImparfait(inf, nous.t, 3);
+  if (!hasTense(inf, "futur")) addFutur(inf, inf.replace(/e$/, ""), 4, [inf.slice(0, -2)]);
+}
+
 // Impératif
 function erImp(inf) {
   const rows = presentEr(inf);
@@ -3894,6 +4019,9 @@ function erImp(inf) {
 }
 for (const inf of ["aimer", "jouer", "chanter", "parler", "regarder", "écouter", "manger", "dessiner", "chercher", "donner", "fermer", "continuer"]) {
   erImp(inf);
+}
+for (const inf of ER_LIVING) {
+  if (!hasTense(inf, "impératif")) erImp(inf);
 }
 addImp("être", "sois", "soyons", "soyez", 3, ["soit", "es", "sui"], ["être", "sommes"], ["êtes", "soyez"]);
 addImp("avoir", "aie", "ayons", "ayez", 3, ["ais", "ai", "aies"], ["avons", "ayons"], ["avez", "ayez"]);

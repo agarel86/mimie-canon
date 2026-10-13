@@ -2975,72 +2975,84 @@ def no_accent(s: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
+def _fold_doubles(s: str) -> str:
+    return re.sub(r"([bcdfghjklmnpqrstvwxzç])\1+", r"\1", s, flags=re.I)
+
+
+def _fault_kind(correct: str, wrong: str) -> str:
+    if not wrong or wrong == correct:
+        return ""
+    a, b = no_accent(correct), no_accent(wrong)
+    if a == b:
+        return "other" if len(correct) <= 3 else "accent"
+    if _fold_doubles(a) == _fold_doubles(b):
+        return "double"
+    return "other"
+
+
 def faults(word: str) -> list[str]:
-    out: list[str] = []
+    # Fautes CE2 : lettres muettes, -eau/-au, gn, tion… Pas de rr inventé, pas d'accent en premier.
+    raw: list[str] = []
 
     def add(w: str | None) -> None:
         if not w:
             return
         w = w.strip()
-        if w and w != word and w not in out:
-            out.append(w)
+        if w and w != word and w not in raw:
+            raw.append(w)
 
-    add(no_accent(word))
-    m = re.search(r"(.)\1", word)
-    if m:
-        i = m.start()
-        add(word[:i] + word[i + 1 :])
-    else:
-        for i, c in enumerate(word):
-            if c.lower() in "bcdfghjklmnpqrstvwxz" and i > 0:
-                add(word[: i] + c + word[i:])
-                break
-    if word.endswith("é"):
-        add(word[:-1] + "er")
-        add(word[:-1] + "ée")
-    if "ph" in word:
-        add(word.replace("ph", "f", 1))
-    if "qu" in word:
-        add(word.replace("qu", "k", 1))
     if word.endswith("eau"):
+        add(word[:-3] + "au")
         add(word[:-3] + "o")
-        add(word + "d")
+        add(word + "x")
     if word.endswith("aux"):
         add(word[:-3] + "als")
         add(word[:-1] + "s")
     if "tion" in word:
         add(word.replace("tion", "sion", 1))
         add(word.replace("tion", "cion", 1))
-    if "ain" in word:
-        add(word.replace("ain", "in", 1))
-    if word.endswith("er") and len(word) > 3:
-        add(word[:-2] + "é")
-    if "è" in word:
-        add(word.replace("è", "é", 1))
-    if "ê" in word:
-        add(word.replace("ê", "ai", 1))
-    if "ç" in word:
-        add(word.replace("ç", "c", 1))
-        add(word.replace("ç", "ss", 1))
-    if "ss" in word:
-        add(word.replace("ss", "s", 1))
+    if "ph" in word:
+        add(word.replace("ph", "f", 1))
+    if "qu" in word:
+        add(word.replace("qu", "c", 1))
     if "gn" in word:
         add(word.replace("gn", "ni", 1))
     if "ill" in word:
-        add(word.replace("ill", "y", 1))
-    if "eau" in word and not word.endswith("eau"):
-        add(word.replace("eau", "o", 1))
+        add(word.replace("ill", "il", 1))
+    if "ç" in word:
+        add(word.replace("ç", "ss", 1))
+    if "y" in word[1:]:
+        add(word.replace("y", "i", 1))
+    m = re.search(r"([bcdfghjklmnpqrstvwxzç])\1", word, re.I)
+    if m:
+        add(word[: m.start()] + m.group(1) + word[m.end() :])
+    if word.endswith("er") and len(word) > 3:
+        add(word[:-1])
+    if word.endswith("t") and len(word) > 3:
+        add(word + "e")
+    if word.endswith("d") and len(word) > 3:
+        add(word[:-1])
+    if not word.endswith("e") and len(word) > 3 and word[-1] in "nrl":
+        add(word + "e")
     if word.endswith("e") and len(word) > 4:
+        add(word + "s")
+    if len(word) > 3:
         add(word[:-1])
-    elif len(word) > 3:
         add(word + "e")
-        add(word[:-1])
+
+    others = [w for w in raw if _fault_kind(word, w) == "other"]
+    doubles = [w for w in raw if _fault_kind(word, w) == "double"]
+    accents = [w for w in raw if _fault_kind(word, w) == "accent"]
+    out = others[:3]
+    if len(out) < 2 and doubles:
+        out.append(doubles[0])
     if len(out) < 2:
-        add(word + "e")
-        add(word + "t")
-        if "e" in word:
-            add(word.replace("e", "é", 1))
-    return out[:3]
+        stripped = no_accent(word)
+        if stripped != word:
+            out.append(stripped)
+        elif accents:
+            out.append(accents[0])
+    return out[:4]
 
 
 def tokenize_group(blob: str) -> list[str]:

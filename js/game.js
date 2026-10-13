@@ -312,6 +312,58 @@
       return / · (présent|futur|imparfait|passé composé|impératif) · /.test(entry.g);
     }
 
+    function noAccent(s) {
+      return String(s || "")
+        .replace(/œ/g, "oe")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function foldDoubles(s) {
+      return String(s).replace(/([bcdfghjklmnpqrstvwxzç])\1+/gi, "$1");
+    }
+
+    function faultKind(correct, shown) {
+      if (!shown || shown === correct) return "";
+      const a = noAccent(correct);
+      const b = noAccent(shown);
+      if (a === b) return String(correct).length <= 3 ? "other" : "accent";
+      if (foldDoubles(a) === foldDoubles(b)) return "double";
+      return "other";
+    }
+
+    const CORE_VERBS = /^(être|avoir|aller|faire|dire|venir|prendre|voir|pouvoir|vouloir|savoir|mettre|partir|finir|lire|écrire|manger|aimer|jouer|parler|chercher|donner)$/;
+
+    function verbScore(entry) {
+      const parts = (entry.g || "").split(" · ");
+      const inf = parts[0] || "";
+      const tense = parts[1] || "";
+      let score = 1;
+      if (CORE_VERBS.test(inf)) score += 6;
+      if (tense === "imparfait" || tense === "futur" || tense === "passé composé" || tense === "impératif") score += 5;
+      else if (tense === "présent" && inf.endsWith("er") && !CORE_VERBS.test(inf)) score = 0.35;
+      else if (tense === "présent") score += 2;
+      return score;
+    }
+
+    function pickWeighted(arr, scoreFn) {
+      if (!arr.length) return null;
+      let total = 0;
+      const scores = [];
+      for (let i = 0; i < arr.length; i++) {
+        const s = scoreFn(arr[i]);
+        scores.push(s);
+        total += s;
+      }
+      if (total <= 0) return pick(arr);
+      let r = Math.random() * total;
+      for (let i = 0; i < arr.length; i++) {
+        r -= scores[i];
+        if (r <= 0) return arr[i];
+      }
+      return arr[arr.length - 1];
+    }
+
     function personKid(person) {
       return String(person || "")
         .replace(/il\/elle/g, "il, elle")
@@ -412,7 +464,12 @@
       const most = review ? 4 : Math.max(1, Math.min(4, Math.max(3, tier())));
       if (Math.random() < verbShare()) {
         const verbs = verbsByMax[most];
-        const hit = pickFresh(verbs);
+        const recent = state.recent;
+        const fresh = [];
+        for (let i = 0; i < verbs.length; i++) {
+          if (!recent.includes(seenKey(verbs[i]))) fresh.push(verbs[i]);
+        }
+        const hit = pickWeighted(fresh.length ? fresh : verbs, verbScore);
         if (hit) return hit;
       }
       return pickFresh(wordsByMax[review ? 4 : Math.max(1, Math.min(4, tier()))]) || pick(bank);
@@ -600,7 +657,10 @@
         if (extra && lettersKept(shown, mask) !== entry.t && !isSubsequence(entry.t, shown)) return;
         options.push({ shown: shown, mask: mask });
       });
-      return options.length ? pick(options) : null;
+      if (!options.length) return null;
+      const others = options.filter((opt) => faultKind(entry.t, opt.shown) === "other");
+      if (others.length) return pick(others);
+      return pick(options);
     }
 
     for (let i = 0; i < bank.length; i++) {
@@ -636,14 +696,28 @@
       let pool = letterPoolByMax[most];
       if (!pool.length) pool = letterPool;
       if (!pool.length) return null;
+      const recent = state.recent;
+      if (Math.random() < 0.88) {
+        const others = [];
+        for (let i = 0; i < pool.length; i++) {
+          const w = pool[i];
+          if (recent.includes(seenKey(w))) continue;
+          const fault = visibleFault(w);
+          if (fault && faultKind(w.t, fault.shown) === "other") others.push(w);
+        }
+        if (others.length) {
+          const verbs = others.filter(isVerb);
+          if (Math.random() < verbShare() && verbs.length) return pickWeighted(verbs, verbScore);
+          return pickFresh(others);
+        }
+      }
       if (Math.random() < verbShare()) {
         const verbs = [];
-        const recent = state.recent;
         for (let i = 0; i < pool.length; i++) {
           const w = pool[i];
           if (isVerb(w) && !recent.includes(seenKey(w))) verbs.push(w);
         }
-        if (verbs.length) return pick(verbs);
+        if (verbs.length) return pickWeighted(verbs, verbScore);
       }
       return pickFresh(pool);
     }
@@ -710,10 +784,12 @@
           if (confusesPerson(entry, word) || confusesLex(entry, word)) return false;
           return true;
         });
-        if (!wrongs.length) continue;
-        const take = wantThree && wrongs.length >= 2 ? 2 : 1;
+        const varied = wrongs.filter((word) => faultKind(entry.t, word) === "other");
+        const useWrongs = varied.length && Math.random() < 0.88 ? varied : wrongs;
+        if (!useWrongs.length) continue;
+        const take = wantThree && useWrongs.length >= 2 ? 2 : 1;
         const picked = [];
-        const pool = wrongs.slice();
+        const pool = useWrongs.slice();
         while (picked.length < take && pool.length) picked.push(pool.splice(rand(pool.length), 1)[0]);
         const specs = [{ text: entry.t, wrong: false }];
         picked.forEach((text) => specs.push({ text: text, wrong: true }));
